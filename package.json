@@ -18,15 +18,22 @@
   },
   "homepage": "https://github.com/shyguy1412/bb-external-editor#readme",
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^7.3.8",
+    "@mui/material": "^7.3.8",
     "@types/react": "^18.3.4",
     "@types/react-dom": "^18.3.0",
     "esbuild": "^0.23.1",
-    "esbuild-bitburner-plugin": "^1.6.3"
+    "esbuild-bitburner-plugin": "^1.6.3",
+    "lodash": "^4.17.23",
+    "react-is": "^17.0.2"
   },
   "devDependencies": {
     "@eslint/css": "^0.14.1",
     "@eslint/js": "^10.0.1",
     "@eslint/markdown": "^7.5.1",
+    "@types/lodash": "^4.17.24",
     "eslint": "^10.0.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",
@@ -36,5 +43,8 @@
     "prettier": "^3.8.1",
     "react": "^18.3.1",
     "typescript-eslint": "^8.56.1"
+  },
+  "overrides": {
+    "react-is": "^17.0.2"
   }
 }
