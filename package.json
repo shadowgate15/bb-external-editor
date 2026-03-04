@@ -4,7 +4,8 @@
   "description": "template for external editors for the game bitburner",
   "main": "index.js",
   "scripts": {
-    "start": "node ./config.mjs"
+    "start": "node ./config.mjs",
+    "lint": "eslint ."
   },
   "repository": {
     "type": "git",
@@ -23,6 +24,17 @@
     "esbuild-bitburner-plugin": "^1.6.3"
   },
   "devDependencies": {
-    "prettier": "^3.8.1"
+    "@eslint/css": "^0.14.1",
+    "@eslint/js": "^10.0.1",
+    "@eslint/json": "^1.0.1",
+    "@eslint/markdown": "^7.5.1",
+    "eslint": "^10.0.2",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.5",
+    "eslint-plugin-react": "^7.37.5",
+    "globals": "^17.4.0",
+    "jiti": "^2.6.1",
+    "prettier": "^3.8.1",
+    "typescript-eslint": "^8.56.1"
   }
 }
