@@ -49,10 +49,18 @@ export async function runBatch(ns: NS, target: string) {
     return i
   })()
 
-  threadCoordinator.addHackThreads(target, hackThreads, hackDelay)
-  threadCoordinator.addWeakenThreads(target, weakenHackThreads, 0)
-  threadCoordinator.addGrowThreads(target, growThreads, growDelay)
-  threadCoordinator.addWeakenThreads(target, weakenGrowThreads, DELAY * 2, portNumber)
+  if (
+    threadCoordinator.canAddAllThreads({
+      growThreads,
+      hackThreads,
+      weakenThreads: weakenHackThreads + weakenGrowThreads,
+    })
+  ) {
+    threadCoordinator.addHackThreads(target, hackThreads, hackDelay)
+    threadCoordinator.addWeakenThreads(target, weakenHackThreads, 0)
+    threadCoordinator.addGrowThreads(target, growThreads, growDelay)
+    threadCoordinator.addWeakenThreads(target, weakenGrowThreads, DELAY * 2, portNumber)
 
-  await ns.nextPortWrite(portNumber)
+    await ns.nextPortWrite(portNumber)
+  }
 }

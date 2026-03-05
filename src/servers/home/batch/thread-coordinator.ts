@@ -9,7 +9,7 @@ const HACK_SCRIPT = 'batch/hack.js'
 
 export class ThreadCoordinator {
   private get servers() {
-    const servers = ServerList.get(this.ns)
+    const servers = ServerList.get(this.ns).filter((s) => s.startsWith('pserv'))
 
     if (normalizeFlags(this.ns).home) {
       servers.unshift('home')
@@ -19,6 +19,26 @@ export class ThreadCoordinator {
   }
 
   constructor(private readonly ns: NS) {}
+
+  canAddAllThreads({
+    growThreads,
+    hackThreads,
+    weakenThreads,
+  }: {
+    growThreads: number
+    hackThreads: number
+    weakenThreads: number
+  }): boolean {
+    const requiredRams =
+      this.ns.getScriptRam(GROW_SCRIPT) * growThreads +
+      this.ns.getScriptRam(WEAKEN_SCRIPT) * weakenThreads +
+      this.ns.getScriptRam(HACK_SCRIPT) * hackThreads
+
+    // Use only 90% of available RAM to avoid edge cases where we run out of RAM due to other processes or scripts
+    const totalAvailableThreads = this.servers.reduce((total, server) => total + this.getAvailableRam(server), 0) * 0.9
+
+    return totalAvailableThreads >= requiredRams
+  }
 
   /**
    * @returns number of threads that were added, will be -1 if there is not enough RAM on any server to add a single thread

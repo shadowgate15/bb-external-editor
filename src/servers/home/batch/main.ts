@@ -23,25 +23,25 @@ export async function main(ns: NS) {
   let batchCount = 0
 
   while (true) {
-    if (batchCount < maxBatches) {
-      batchCount++
-      runBatch(ns, target)
-        .then(() => {
-          ns.print(`SUCCESS Batch execution completed for ${target}!`)
-        })
-        .catch((e) => {
-          throw e
-        })
-        .finally(() => {
-          batchCount--
-        })
-    } else {
-      // Wait until the batch count drops below or equal to 10 before starting a new batch
-      while (batchCount >= maxBatches) {
-        // Wait for 500ms before checking again
-        await ns.asleep(500)
-      }
-    }
+    //   if (batchCount < maxBatches) {
+    batchCount++
+    runBatch(ns, target)
+      .then(() => {
+        ns.print(`SUCCESS Batch execution completed for ${target}!`)
+      })
+      .catch((e) => {
+        throw e
+      })
+      .finally(() => {
+        batchCount--
+      })
+    // } else {
+    //   // Wait until the batch count drops below or equal to 10 before starting a new batch
+    //   while (batchCount >= maxBatches) {
+    //     // Wait for 500ms before checking again
+    //     await ns.asleep(500)
+    //   }
+    // }
 
     await ns.asleep(50) // Sleep for a short time before starting the next batch
   }
