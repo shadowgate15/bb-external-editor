@@ -3,10 +3,9 @@ import { useNetscript } from '@/lib/hooks/use-netscript'
 import { useServerList } from '@/lib/hooks/use-server-list'
 import Button from '@mui/material/Button'
 import FormControl from '@mui/material/FormControl'
-import InputLabel from '@mui/material/InputLabel'
-import Select from '@mui/material/Select'
-import MenuItem from '@mui/material/MenuItem'
 import { ServerSelect } from '@/lib/components/server-select'
+import { FitContent } from '@/lib/components/fit-content'
+import Box from '@mui/material/Box'
 
 export function Prometheus() {
   const ns = useNetscript()
@@ -39,31 +38,26 @@ export function Prometheus() {
   }
 
   return (
-    <div
-      style={{
-        width: '100%',
-        height: '100%',
-      }}
-    >
-      <FormControl
-        variant="standard"
-        fullWidth
+    <FitContent>
+      <Box
         sx={{
-          marginTop: 1,
+          padding: 1,
         }}
       >
-        <ServerSelect servers={servers} value={selectedServer} onChange={(e) => setSelectedServer(e.target.value)} />
+        <FormControl variant="standard" fullWidth>
+          <ServerSelect servers={servers} value={selectedServer} onChange={(e) => setSelectedServer(e.target.value)} />
 
-        <Button
-          variant="contained"
-          onClick={submit}
-          sx={{
-            marginTop: 1,
-          }}
-        >
-          Submit
-        </Button>
-      </FormControl>
-    </div>
+          <Button
+            variant="contained"
+            onClick={submit}
+            sx={{
+              marginTop: 1,
+            }}
+          >
+            Submit
+          </Button>
+        </FormControl>
+      </Box>
+    </FitContent>
   )
 }

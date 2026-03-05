@@ -2,13 +2,14 @@ import InputLabel from '@mui/material/InputLabel'
 import MenuItem from '@mui/material/MenuItem'
 import Select, { SelectProps } from '@mui/material/Select'
 import React from 'react'
+import { useId } from '../hooks/use-id'
 
 export type ServerSelectProps = SelectProps<string> & {
   servers: string[]
 }
 
 export function ServerSelect({ servers, value, onChange, ...selectProps }: ServerSelectProps) {
-  const id = React.useId()
+  const id = useId()
 
   return (
     <>

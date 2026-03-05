@@ -22,12 +22,13 @@
     "@emotion/styled": "^11.14.1",
     "@mui/icons-material": "^7.3.8",
     "@mui/material": "^7.3.8",
-    "@types/react": "^18.3.4",
-    "@types/react-dom": "^18.3.0",
+    "@types/react": "^17.0.2",
+    "@types/react-dom": "^17.0.2",
     "esbuild": "^0.23.1",
     "esbuild-bitburner-plugin": "^1.6.3",
     "lodash": "^4.17.23",
-    "react-is": "^17.0.2"
+    "react-is": "^17.0.2",
+    "react-resize-detector": "^12.3.0"
   },
   "devDependencies": {
     "@eslint/css": "^0.14.1",
