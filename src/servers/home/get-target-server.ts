@@ -8,6 +8,6 @@ export async function main(ns: NS) {
   for (const [server, score] of serversWithScoreAbove(ns, servers)
     .filter(([_, score]) => score)
     .reverse()) {
-    ns.tprint(`${server}: ${score.toFixed(2)}`)
+    ns.tprint(`${server}: ${score.toFixed(2)} - Money: ${ns.formatNumber(ns.getServerMaxMoney(server), 2)}`)
   }
 }

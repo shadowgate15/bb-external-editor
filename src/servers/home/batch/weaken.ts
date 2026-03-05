@@ -1,3 +1,4 @@
+import { assertIsNumber } from '@/lib/assert/is-number'
 import { NS } from '@ns'
 
 export async function main(ns: NS) {
@@ -7,7 +8,7 @@ export async function main(ns: NS) {
     throw new Error('Please provide a target server as an argument')
   }
 
-  const delay = (ns.args[1] as number) || 0
+  const startTime = assertIsNumber(ns.args[1], 'Start time must be a number')
 
   const portNumber = ns.args[2] as number
 
@@ -17,6 +18,6 @@ export async function main(ns: NS) {
     })
   }
 
-  ns.print(new Date().toLocaleString() + ` - Starting grow on ${target} with delay of ${delay}ms`)
-  await ns.weaken(target, { additionalMsec: delay })
+  ns.print(new Date().toLocaleString() + ` - Starting weaken on ${target} at ${new Date(startTime).toLocaleString()}`)
+  await ns.weaken(target, { additionalMsec: startTime - Date.now() })
 }

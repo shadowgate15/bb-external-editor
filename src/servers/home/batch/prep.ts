@@ -39,9 +39,10 @@ export async function prep(ns: NS, target: string) {
 
     const growPortNumber = Date.now()
     const weakenPortNumber = Date.now() + 1
+    const startTime = Date.now() + 250
 
     try {
-      threadCoordinator.addWeakenThreads(target, weakenThreads, 0, weakenPortNumber)
+      threadCoordinator.addWeakenThreads(target, weakenThreads, startTime, weakenPortNumber)
     } catch (e) {
       // If theree is not enough RAM to add weaken threads,
       // then we doen't want to wait on the weaken threads
@@ -49,7 +50,7 @@ export async function prep(ns: NS, target: string) {
       else throw e
     }
     try {
-      threadCoordinator.addGrowThreads(target, growThreads, 0, growPortNumber)
+      threadCoordinator.addGrowThreads(target, growThreads, startTime, growPortNumber)
     } catch (e) {
       // If theree is not enough RAM to add grow threads,
       // then we doen't want to wait on the grow threads

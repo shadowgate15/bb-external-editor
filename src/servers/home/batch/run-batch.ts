@@ -56,10 +56,12 @@ export async function runBatch(ns: NS, target: string) {
       weakenThreads: weakenHackThreads + weakenGrowThreads,
     })
   ) {
-    threadCoordinator.addHackThreads(target, hackThreads, hackDelay)
-    threadCoordinator.addWeakenThreads(target, weakenHackThreads, 0)
-    threadCoordinator.addGrowThreads(target, growThreads, growDelay)
-    threadCoordinator.addWeakenThreads(target, weakenGrowThreads, DELAY * 2, portNumber)
+    const startTime = Date.now() + 250
+
+    threadCoordinator.addHackThreads(target, hackThreads, startTime + hackDelay)
+    threadCoordinator.addWeakenThreads(target, weakenHackThreads, startTime)
+    threadCoordinator.addGrowThreads(target, growThreads, startTime + growDelay)
+    threadCoordinator.addWeakenThreads(target, weakenGrowThreads, startTime + DELAY * 2, portNumber)
 
     await ns.nextPortWrite(portNumber)
   }

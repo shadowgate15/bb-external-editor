@@ -47,7 +47,7 @@ export class ThreadCoordinator {
     target: string,
     threads: number,
     script: string,
-    delay?: number,
+    startTime: number,
     portNumber?: number,
   ): number {
     const scriptRam = this.ns.getScriptRam(script)
@@ -64,7 +64,7 @@ export class ThreadCoordinator {
 
     nuke(this.ns, server)
 
-    const args = [target, delay || 0]
+    const args = [target, startTime]
 
     if (portNumber !== undefined) {
       args.push(portNumber)
@@ -76,11 +76,11 @@ export class ThreadCoordinator {
   }
 
   private _makeAddThreadsFunction(script: string) {
-    return (target: string, threads: number, delay?: number, portNumber?: number) => {
+    return (target: string, threads: number, startTime: number, portNumber?: number) => {
       let addedThreads = 0
 
       while (addedThreads < threads) {
-        const result = this.tryToAddThreads(target, threads - addedThreads, script, delay, portNumber)
+        const result = this.tryToAddThreads(target, threads - addedThreads, script, startTime, portNumber)
 
         if (result === -1) {
           throw new NotEnoughRamError()
