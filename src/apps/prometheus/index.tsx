@@ -6,6 +6,7 @@ import FormControl from '@mui/material/FormControl'
 import InputLabel from '@mui/material/InputLabel'
 import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
+import { ServerSelect } from '@/lib/components/server-select'
 
 export function Prometheus() {
   const ns = useNetscript()
@@ -51,20 +52,7 @@ export function Prometheus() {
           marginTop: 1,
         }}
       >
-        <InputLabel id="server-select-label">Server</InputLabel>
-        <Select
-          labelId="server-select-label"
-          id="server-select"
-          value={selectedServer}
-          onChange={(e) => setSelectedServer(e.target.value)}
-          autoWidth
-        >
-          {servers.map((server) => (
-            <MenuItem key={server} value={server}>
-              {server}
-            </MenuItem>
-          ))}
-        </Select>
+        <ServerSelect servers={servers} value={selectedServer} onChange={(e) => setSelectedServer(e.target.value)} />
 
         <Button
           variant="contained"
