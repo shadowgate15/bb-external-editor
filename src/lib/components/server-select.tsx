@@ -6,9 +6,10 @@ import { useId } from '../hooks/use-id'
 
 export type ServerSelectProps<T> = SelectProps<T> & {
   servers: string[]
+  itemRenderer?: (server: string) => React.ReactNode
 }
 
-export function ServerSelect<T>({ servers, value, onChange, ...selectProps }: ServerSelectProps<T>) {
+export function ServerSelect<T>({ servers, value, onChange, itemRenderer, ...selectProps }: ServerSelectProps<T>) {
   const id = useId()
 
   return (
@@ -26,7 +27,7 @@ export function ServerSelect<T>({ servers, value, onChange, ...selectProps }: Se
         </MenuItem>
         {servers.map((server) => (
           <MenuItem key={server} value={server}>
-            {server}
+            {itemRenderer ? itemRenderer(server) : server}
           </MenuItem>
         ))}
       </Select>

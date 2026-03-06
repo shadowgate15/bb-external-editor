@@ -29,6 +29,6 @@ export function serversWithScoreAbove(ns: NS, servers: string[]): [server: strin
   return orderedServers.map((s) => [s, scoreServer(ns, s)])
 }
 
-function scoreServer(ns: NS, server: string): number {
+export function scoreServer(ns: NS, server: string): number {
   return ns.getServerMaxMoney(server) / ns.getServerMinSecurityLevel(server)
 }
