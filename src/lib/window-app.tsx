@@ -3,6 +3,7 @@ import { findTailRoot, watchElForDeletion } from './bitburner-dom'
 import { NetscriptContext, TerminateContext, TailRootContext } from './context'
 import React from 'react'
 import { createTheme, Theme, ThemeProvider } from '@mui/material/styles'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 function createThemeFromNS(ns: NS): Theme {
   const nsTheme = ns.ui.getTheme()
@@ -51,6 +52,16 @@ export async function createWindowApp(ns: NS, Component: React.FunctionComponent
   const controller = new AbortController()
   ns.atExit(() => (controller.abort(), ns.ui.closeTail()), crypto.randomUUID())
 
+  // Create a client
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: 1000, // 1 second
+        refetchInterval: 1000, // 1 second
+      },
+    },
+  })
+
   return new Promise<void>((resolve) => {
     watchElForDeletion(root, () => resolve(), controller.signal)
     ns.printRaw(
@@ -60,16 +71,18 @@ export async function createWindowApp(ns: NS, Component: React.FunctionComponent
             <TerminateContext.Provider value={resolve}>
               <TailRootContext.Provider value={root}>
                 <ThemeProvider theme={createThemeFromNS(ns)}>
-                  <div
-                    style={{
-                      position: 'relative',
-                      color: ns.ui.getTheme().primarylight,
-                      width: '100%',
-                      height: '100%',
-                    }}
-                  >
-                    <Component></Component>
-                  </div>
+                  <QueryClientProvider client={queryClient}>
+                    <div
+                      style={{
+                        position: 'relative',
+                        color: ns.ui.getTheme().primarylight,
+                        width: '100%',
+                        height: '100%',
+                      }}
+                    >
+                      <Component></Component>
+                    </div>
+                  </QueryClientProvider>
                 </ThemeProvider>
               </TailRootContext.Provider>
             </TerminateContext.Provider>
