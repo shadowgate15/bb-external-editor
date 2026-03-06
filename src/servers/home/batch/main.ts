@@ -16,6 +16,7 @@ export async function main(ns: NS) {
   await prep(ns, target)
 
   ns.print(`SUCCESS Preparation completed for ${target}!`)
+  ns.toast(`Preparation completed for ${target}!`, 'success')
   ns.print(`INFO Starting batch execution for ${target}...`)
 
   while (true) {
