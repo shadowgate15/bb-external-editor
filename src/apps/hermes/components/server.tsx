@@ -40,7 +40,8 @@ export function Server({ server }: ServerProps) {
               <Divider />
 
               <Typography sx={{ fontSize: 14 }}>
-                Security: {ns.getServerSecurityLevel(server)} / {ns.getServerMinSecurityLevel(server)}
+                Security: {ns.formatNumber(ns.getServerSecurityLevel(server), 2)} /{' '}
+                {ns.getServerMinSecurityLevel(server)}
               </Typography>
             </>
           )}
