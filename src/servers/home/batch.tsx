@@ -28,6 +28,7 @@ function App() {
   const scoredServers = React.useMemo(
     () =>
       serversWithScoreAbove(ns, servers)
+        .filter(([, score]) => score > 0)
         .filter(([server]) => !ns.isRunning('batch/main.js', 'home', server, '--home'))
         .map((s) => s[0]),
     [servers],
