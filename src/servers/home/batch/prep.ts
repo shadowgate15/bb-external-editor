@@ -1,5 +1,6 @@
 import { NS } from '@ns'
 import { NotEnoughRamError, ThreadCoordinator } from './thread-coordinator'
+import { randomNumber } from '@/lib/utils/random-number'
 
 const DELAY = 20
 
@@ -42,8 +43,8 @@ export async function prep(ns: NS, target: string) {
       return i
     })()
 
-    const growPortNumber = Date.now()
-    const weakenPortNumber = Date.now() + 1
+    const growPortNumber = randomNumber()
+    const weakenPortNumber = randomNumber()
     const startTime = Date.now() + 250
 
     try {

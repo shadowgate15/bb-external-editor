@@ -1,11 +1,12 @@
 import { NS } from '@ns'
 import { ThreadCoordinator } from './thread-coordinator'
+import { randomNumber } from '@/lib/utils/random-number'
 
 const DELAY = 20
 
 export async function runBatch(ns: NS, target: string) {
   const threadCoordinator = new ThreadCoordinator(ns)
-  const portNumber = Date.now()
+  const portNumber = randomNumber()
 
   const maxMoney = ns.getServerMaxMoney(target)
 
