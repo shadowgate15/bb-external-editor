@@ -67,6 +67,9 @@ function App() {
 
               ns.exec('batch/main.js', 'home', 1, ...args)
               ns.toast(`Started batch on server: ${selectedServer} with args: ${args.join(', ')}`, 'success')
+
+              reloadServers()
+              setSelectedServer('')
             }}
             sx={{
               marginTop: 1,
