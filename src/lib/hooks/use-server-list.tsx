@@ -1,3 +1,4 @@
+import React from 'react'
 import { useNetscript } from './use-netscript'
 
 export function useServerList(
@@ -31,7 +32,7 @@ export function useServerList(
       server = serversToVisit.pop()
     }
 
-    return Array.from(servers.values())
+    return Array.from(servers.values()).sort()
   }, [ns])
 
   const [serverList, setServerList] = React.useState(getServers())

@@ -19,7 +19,7 @@ export function Prometheus() {
     // Only include servers that we own, since we don't want to run share.js on servers we don't control
     return serverInfo.purchasedByPlayer && serverInfo.ramUsed === 0
   })
-  const [selectedServer, setSelectedServer] = React.useState(servers[0] || '')
+  const [selectedServer, setSelectedServer] = React.useState('')
 
   function submit(e: React.MouseEvent<HTMLButtonElement>) {
     e.preventDefault()
@@ -33,8 +33,10 @@ export function Prometheus() {
 
     ns.exec('share.js', target, { threads: maxThreads, temporary: true })
     ns.toast(`Sharing data from server: ${target} with ${maxThreads} threads`, 'success')
+
     reloadServers()
-    setSelectedServer(servers[0] || '')
+
+    setSelectedServer('')
   }
 
   return (
@@ -45,7 +47,13 @@ export function Prometheus() {
         }}
       >
         <FormControl variant="standard" fullWidth>
-          <ServerSelect servers={servers} value={selectedServer} onChange={(e) => setSelectedServer(e.target.value)} />
+          <ServerSelect
+            servers={servers}
+            value={selectedServer}
+            onChange={(e) => {
+              return setSelectedServer(e.target.value)
+            }}
+          />
 
           <Button
             variant="contained"

@@ -9,16 +9,19 @@ export async function main(ns: NS) {
     visited.add(server)
 
     if (server === 'run4theh111z') {
-      return [...path, server]
+      return [[...path, server]]
     }
 
     const servers = ns.scan(server)
+    let possiblePaths: string[][] = []
 
     for (const s of servers) {
       const res = search(s, [...path, server])
 
-      if (res) return res
+      if (res) possiblePaths = possiblePaths.concat(res)
     }
+
+    return possiblePaths
   }
 
   ns.tprint(search('home', []))
