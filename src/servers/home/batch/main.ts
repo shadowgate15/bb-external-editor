@@ -3,6 +3,7 @@ import { assertIsString } from '@/lib/assert/is-string'
 import { NS } from '@ns'
 import { prep } from './prep'
 import { runBatch } from './run-batch'
+import { normalizeFlags } from './normalize-flags'
 
 export async function main(ns: NS) {
   ns.disableLog('ALL')
@@ -19,15 +20,28 @@ export async function main(ns: NS) {
   ns.toast(`Preparation completed for ${target}!`, 'success')
   ns.print(`INFO Starting batch execution for ${target}...`)
 
-  while (true) {
-    runBatch(ns, target)
-      .then(() => {
-        ns.print(`SUCCESS Batch execution completed for ${target}!`)
-      })
-      .catch((e) => {
-        throw e
-      })
+  let batchCount = 0
+  const { maxBatches } = normalizeFlags(ns)
 
-    await ns.asleep(50) // Sleep for a short time before starting the next batch
+  while (true) {
+    if (maxBatches === -1 || batchCount < maxBatches) {
+      batchCount++
+
+      runBatch(ns, target)
+        .then(() => {
+          ns.print(`SUCCESS Batch execution completed for ${target}!`)
+        })
+        .catch((e) => {
+          throw e
+        })
+        .finally(() => {
+          batchCount--
+        })
+
+      ns.print(`INFO Batch ${batchCount} started for ${target}.`)
+      await ns.asleep(50) // Sleep for a short time before starting the next batch
+    } else {
+      await ns.asleep(1000) // Sleep for a longer time if we've reached the max batch count
+    }
   }
 }

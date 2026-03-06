@@ -9,13 +9,17 @@ const HACK_SCRIPT = 'batch/hack.js'
 
 export class ThreadCoordinator {
   private get servers() {
-    const servers = ServerList.get(this.ns).filter((s) => s.startsWith('pserv'))
+    const servers = ServerList.get(this.ns)
 
     if (normalizeFlags(this.ns).home) {
       servers.unshift('home')
     }
 
     return servers
+  }
+
+  private get reservedHomeRam() {
+    return Number(this.ns.read('home-reserved-ram.txt')) || 0
   }
 
   constructor(private readonly ns: NS) {}
@@ -83,7 +87,7 @@ export class ThreadCoordinator {
         const result = this.tryToAddThreads(target, threads - addedThreads, script, startTime, portNumber)
 
         if (result === -1) {
-          throw new NotEnoughRamError()
+          throw new NotEnoughRamError(addedThreads)
         }
 
         addedThreads += result
@@ -99,7 +103,7 @@ export class ThreadCoordinator {
     let maxRam = this.ns.getServerMaxRam(server)
 
     if (server === 'home') {
-      maxRam = maxRam - 2 ** 10 // Reserve 1TB for home activities
+      maxRam = maxRam - this.reservedHomeRam
     }
 
     return maxRam - this.ns.getServerUsedRam(server)
@@ -107,7 +111,11 @@ export class ThreadCoordinator {
 }
 
 export class NotEnoughRamError extends Error {
-  constructor() {
+  threadsAdded: number = 0
+
+  constructor(threadsAdded: number) {
     super('Not enough RAM to add more threads')
+
+    this.threadsAdded = threadsAdded
   }
 }
