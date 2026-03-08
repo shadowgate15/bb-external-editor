@@ -22,7 +22,7 @@ export async function main(ns: NS) {
     }
     //Make the script wait for a second before looping again.
     //Removing this line will cause an infinite loop and crash the game.
-    await ns.asleep(1000)
+    await ns.asleep(50)
   }
 
   ns.alert('Purchased maximum number of servers with ' + ram + 'GB of RAM!')
