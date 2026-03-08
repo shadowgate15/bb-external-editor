@@ -1,5 +1,5 @@
 import { NS } from '@ns'
-import { ThreadCoordinator } from './thread-coordinator'
+import { NotEnoughRamError, ThreadCoordinator } from './thread-coordinator'
 import { randomNumber } from '@/lib/utils/random-number'
 
 const DELAY = 20
@@ -58,12 +58,21 @@ export async function runBatch(ns: NS, target: string) {
     })
   ) {
     const startTime = Date.now() + 250
+    const pids = []
 
-    threadCoordinator.addHackThreads(target, hackThreads, startTime + hackDelay)
-    threadCoordinator.addWeakenThreads(target, weakenHackThreads, startTime)
-    threadCoordinator.addGrowThreads(target, growThreads, startTime + growDelay)
-    threadCoordinator.addWeakenThreads(target, weakenGrowThreads, startTime + DELAY * 2, portNumber)
+    try {
+      pids.push(...threadCoordinator.addHackThreads(target, hackThreads, startTime + hackDelay))
+      pids.push(...threadCoordinator.addWeakenThreads(target, weakenHackThreads, startTime))
+      pids.push(...threadCoordinator.addGrowThreads(target, growThreads, startTime + growDelay))
+      pids.push(...threadCoordinator.addWeakenThreads(target, weakenGrowThreads, startTime + DELAY * 2, portNumber))
 
-    await ns.nextPortWrite(portNumber)
+      await ns.nextPortWrite(portNumber)
+    } catch (e) {
+      if (e instanceof NotEnoughRamError) {
+        for (const pid of [...pids, ...e.pids]) {
+          ns.kill(pid)
+        }
+      }
+    }
   }
 }

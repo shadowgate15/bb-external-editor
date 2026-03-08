@@ -53,13 +53,13 @@ export class ThreadCoordinator {
     script: string,
     startTime: number,
     portNumber?: number,
-  ): number {
+  ): [threadsAdded: number, pid: number] {
     const scriptRam = this.ns.getScriptRam(script)
 
     const server = this.servers.find((s) => this.getAvailableRam(s) > scriptRam)
 
     if (!server) {
-      return -1
+      return [-1, -1]
     }
 
     const threadsToAdd = Math.min(threads, Math.floor(this.getAvailableRam(server) / scriptRam))
@@ -74,24 +74,29 @@ export class ThreadCoordinator {
       args.push(portNumber)
     }
 
-    this.ns.exec(script, server, { threads: threadsToAdd, temporary: true }, ...args)
+    const pid = this.ns.exec(script, server, { threads: threadsToAdd, temporary: true }, ...args)
 
-    return threadsToAdd
+    return [threadsToAdd, pid]
   }
 
   private _makeAddThreadsFunction(script: string) {
     return (target: string, threads: number, startTime: number, portNumber?: number) => {
+      const pids = []
+
       let addedThreads = 0
 
       while (addedThreads < threads) {
-        const result = this.tryToAddThreads(target, threads - addedThreads, script, startTime, portNumber)
+        const [result, pid] = this.tryToAddThreads(target, threads - addedThreads, script, startTime, portNumber)
 
         if (result === -1) {
-          throw new NotEnoughRamError(addedThreads)
+          throw new NotEnoughRamError(addedThreads, pids)
         }
 
         addedThreads += result
+        pids.push(pid)
       }
+
+      return pids
     }
   }
 
@@ -112,10 +117,12 @@ export class ThreadCoordinator {
 
 export class NotEnoughRamError extends Error {
   threadsAdded: number = 0
+  pids: number[] = []
 
-  constructor(threadsAdded: number) {
+  constructor(threadsAdded: number, pids: number[]) {
     super('Not enough RAM to add more threads')
 
     this.threadsAdded = threadsAdded
+    this.pids = pids
   }
 }
