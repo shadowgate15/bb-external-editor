@@ -20,14 +20,20 @@
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
+    "@inversifyjs/binding-decorators": "^1.1.5",
     "@mui/icons-material": "^7.3.8",
     "@mui/material": "^7.3.8",
     "@tanstack/react-query": "4",
+    "async-mutex": "^0.5.0",
     "esbuild": "^0.23.1",
     "esbuild-bitburner-plugin": "^1.6.3",
+    "inversify": "^7.11.0",
+    "json-rpc-2.0": "^1.7.1",
     "lodash": "^4.17.23",
     "react-is": "^17.0.2",
-    "react-resize-detector": "^12.3.0"
+    "react-resize-detector": "^12.3.0",
+    "reflect-metadata": "^0.2.2",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@eslint/css": "^0.14.1",
@@ -35,6 +41,7 @@
     "@eslint/markdown": "^7.5.1",
     "@tanstack/eslint-plugin-query": "^5.91.4",
     "@types/lodash": "^4.17.24",
+    "@types/node": "^25.3.5",
     "@types/react": "^17.0.2",
     "@types/react-dom": "^17.0.2",
     "eslint": "^10.0.2",
@@ -45,7 +52,8 @@
     "jiti": "^2.6.1",
     "prettier": "^3.8.1",
     "react": "^18.3.1",
-    "typescript-eslint": "^8.56.1"
+    "typescript-eslint": "^8.56.1",
+    "unenv": "^1.10.0"
   },
   "overrides": {
     "react-is": "^17.0.2"

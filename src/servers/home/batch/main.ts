@@ -17,7 +17,7 @@ export async function main(ns: NS) {
   await prep(ns, target)
 
   ns.print(`SUCCESS Preparation completed for ${target}!`)
-  ns.toast(`Preparation completed for ${target}!`, 'success')
+  ns.toast(`Preparation completed for ${target}!`, 'success', null)
   ns.print(`INFO Starting batch execution for ${target}...`)
 
   let batchCount = 0

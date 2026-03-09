@@ -1,0 +1,43 @@
+import { NSChannel } from '@/lib/channel'
+import type { ChildChannelMethods, ParentChannelMethods } from './shared'
+
+export abstract class ChildChannel extends NSChannel<ChildChannelMethods, ParentChannelMethods> {
+  constructor(
+    ns: NS,
+    from: number,
+    to: number,
+    protected readonly target: string,
+  ) {
+    super(ns, from, to)
+
+    this.server.addMethod('startTime', async (startTime) => {
+      ns.print(`INFO Worker ${this.to} starting at time ${new Date(startTime).toLocaleString()}`)
+
+      try {
+        await this.process(startTime)
+      } catch (error) {
+        this.send('error', error)
+        this.close()
+        return
+      }
+
+      ns.print(`SUCCESS Worker ${this.to} complete`)
+      this.send('complete')
+      this.close()
+    })
+  }
+
+  override async preListen() {
+    this.send('ready')
+  }
+
+  protected calculateDelay(startTime: number) {
+    const now = Date.now()
+
+    const delay = startTime - now
+
+    return delay
+  }
+
+  abstract process(startTime: number): Promise<void>
+}
