@@ -41,7 +41,7 @@ export class BatchManager extends EventEmitter<{
   private setupBatches() {
     const servers = this.serverList.getAll()
 
-    const targetServer = 'foodnstuff'
+    const targetServer = 'catalyst'
 
     if (!this.batchRunners.has(targetServer)) {
       const batchRunner = this.batchRunnerFactory.create(targetServer, 100)

@@ -182,10 +182,6 @@ export class Batch extends EventEmitter<EventMap> {
 
           const [channel, parent, child] = createParentChannel(this.ns, emitter, delay)
 
-          abortSignal.addEventListener('abort', () => {
-            channel.close()
-          })
-
           const listenPromise = channel.listen()
 
           const args = [
@@ -205,6 +201,11 @@ export class Batch extends EventEmitter<EventMap> {
             },
             ...args,
           )
+
+          abortSignal.addEventListener('abort', () => {
+            this.ns.kill(pid)
+            channel.close()
+          })
 
           return listenPromise.finally(() => {
             allocation.release()

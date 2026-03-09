@@ -13,21 +13,22 @@ export abstract class ChildChannel extends NSChannel<ChildChannelMethods, Parent
     this.server.addMethod('startTime', async (startTime) => {
       ns.print(`INFO Worker ${this.to} starting at time ${new Date(startTime).toLocaleString()}`)
 
-      try {
-        await this.process(startTime)
-      } catch (error) {
-        this.send('error', error)
-        this.close()
-        return
-      }
-
-      ns.print(`SUCCESS Worker ${this.to} complete`)
-      this.send('complete')
-      this.close()
+      await this.process(startTime)
+        .then(() => {
+          ns.print(`SUCCESS Worker ${this.to} complete`)
+          this.send('complete')
+        })
+        .catch((error) => {
+          this.send('error', error)
+        })
+        .finally(() => {
+          this.close()
+        })
     })
   }
 
   override async preListen() {
+    this.ns.print(`INFO Worker ${this.to} is ready`)
     this.send('ready')
   }
 
