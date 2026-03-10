@@ -25,7 +25,7 @@ export class BatchRunner {
     await this.preperationLock.runExclusive(async () => {
       if (this.abortController.signal.aborted) return
 
-      this.ns.toast(`Preparing "${this.target}" for hacking...`, 'info', 5000)
+      this.ns.toast(`Preparing "${this.target}" for hacking...`, 'info', null)
 
       // Preration step
       while (
