@@ -11,6 +11,8 @@ import { ScriptAbortController } from './script-abort-controller'
 
 interface EventMap {
   serverAdded: []
+  /** Pings every minute to check for new servers */
+  servers: []
 }
 
 @injectable()
@@ -36,9 +38,10 @@ export class ServerList extends EventEmitter<EventMap> {
 
     const interval = setInterval(() => {
       this._get()
-    }, 1000)
+      this.emit('servers')
+    }, 1000 * 60)
 
-    scriptAbortController.signal.addEventListener('abort', () => {
+    this.scriptAbortController.signal.addEventListener('abort', () => {
       clearInterval(interval)
     })
   }

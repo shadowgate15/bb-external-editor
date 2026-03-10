@@ -37,15 +37,11 @@ export class BatchManager extends EventEmitter<{
       this.setupBatches()
     })
 
-    this.setupBatches()
-
-    const interval = setInterval(() => {
+    this.serverList.on('servers', () => {
       this.setupBatches()
-    }, 1000 * 60)
+    })
 
-    this.ns.atExit(() => {
-      clearInterval(interval)
-    }, crypto.randomUUID())
+    this.setupBatches()
   }
 
   private setupBatches() {

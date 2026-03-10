@@ -47,6 +47,10 @@ export class ThreadManager {
     this.serverList.on('serverAdded', () => {
       this._setup()
     })
+
+    this.serverList.on('servers', () => {
+      this._setup()
+    })
   }
 
   private _setup() {
