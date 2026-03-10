@@ -8,8 +8,16 @@ import { defineConfig } from 'eslint/config'
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended'
 import pluginQuery from '@tanstack/eslint-plugin-query'
 import simpleImportSort from 'eslint-plugin-simple-import-sort'
+import React from 'react'
 
 export default defineConfig([
+  {
+    settings: {
+      react: {
+        version: React.version,
+      },
+    },
+  },
   {
     ignores: ['build/**', 'node_modules/**', './NetscriptDefinitions.d.ts'],
   },

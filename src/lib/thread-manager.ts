@@ -1,7 +1,7 @@
 import 'reflect-metadata'
 
 import { provide } from '@inversifyjs/binding-decorators'
-import { Mutex } from 'async-mutex'
+import { Semaphore } from 'async-mutex'
 import { inject, injectable } from 'inversify'
 
 import { NSIdentifier } from './ns.identifier'
@@ -26,7 +26,7 @@ export interface AllocationItem {
   bind.inSingletonScope()
 })
 export class ThreadManager {
-  private readonly _mutex = new Mutex()
+  private readonly _lock = new Semaphore(5)
 
   private readonly _allocatableServers = new Map<string, AllocatableServer>()
 
@@ -88,7 +88,7 @@ export class ThreadManager {
     priority?: number,
     filter?: (server: string) => boolean,
   ) {
-    await this._mutex.runExclusive(async () => {
+    await this._lock.runExclusive(async () => {
       const tryAllocate = async (threads: number, scriptRam: number) => {
         let neededThreads = threads
         const allocations: AllocationItem[] = []
