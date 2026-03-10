@@ -1,7 +1,7 @@
 import 'reflect-metadata'
 
 import { provide } from '@inversifyjs/binding-decorators'
-import { Mutex } from 'async-mutex'
+import { Semaphore } from 'async-mutex'
 import { inject, injectable } from 'inversify'
 
 import { NSIdentifier } from '../ns.identifier'
@@ -10,12 +10,12 @@ import { NSIdentifier } from '../ns.identifier'
 @provide(undefined, (bind) => {
   bind.inSingletonScope()
 })
-export class PreperationLock extends Mutex {
+export class PreperationLock extends Semaphore {
   constructor(
     @inject(NSIdentifier)
     private readonly ns: NS,
   ) {
-    super()
+    super(2)
 
     this.ns.print('INFO PreperationLock Initialized')
   }
