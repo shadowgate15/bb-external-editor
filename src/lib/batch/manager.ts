@@ -41,27 +41,18 @@ export class BatchManager extends EventEmitter<{
   private setupBatches() {
     const servers = this.serverList.getAll()
 
-    const targetServer = 'foodnstuff'
+    for (const server of servers) {
+      if (this.validHackingLevel(server) && !this.batchRunners.has(server)) {
+        const score = this.ns.getServerMaxMoney(server) / this.ns.getServerMinSecurityLevel(server)
 
-    if (!this.batchRunners.has(targetServer)) {
-      const batchRunner = this.batchRunnerFactory.create(targetServer, 100)
-      batchRunner.start()
+        if (score > 0) {
+          const batchRunner = this.batchRunnerFactory.create(server, score * -1)
+          batchRunner.start()
 
-      this.batchRunners.set(targetServer, batchRunner)
+          this.batchRunners.set(server, batchRunner)
+        }
+      }
     }
-
-    // for (const server of servers) {
-    //   if (this.validHackingLevel(server) && !this.batchRunners.has(server)) {
-    //     const score = this.ns.getServerMaxMoney(server) / this.ns.getServerMinSecurityLevel(server)
-    //
-    //     if (score > 0) {
-    //       const batchRunner = this.batchRunnerFactory.create(server, score * -1)
-    //       batchRunner.start()
-    //
-    //       this.batchRunners.set(server, batchRunner)
-    //     }
-    //   }
-    // }
   }
 
   private validHackingLevel(server: string) {
