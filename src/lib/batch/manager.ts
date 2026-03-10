@@ -33,12 +33,19 @@ export class BatchManager extends EventEmitter<{
 
     this.ns.print('INFO BatchManager Initialized')
 
-    this.setupBatches()
-
     this.serverList.on('serverAdded', () => {
-      this.ns.print('INFO New server added, checking if we can run batches on it...')
       this.setupBatches()
     })
+
+    this.setupBatches()
+
+    const interval = setInterval(() => {
+      this.setupBatches()
+    }, 1000 * 60)
+
+    this.ns.atExit(() => {
+      clearInterval(interval)
+    }, crypto.randomUUID())
   }
 
   private setupBatches() {

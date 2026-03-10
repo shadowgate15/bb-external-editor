@@ -88,64 +88,68 @@ export class ThreadManager {
     priority?: number,
     filter?: (server: string) => boolean,
   ) {
-    await this._lock.runExclusive(async () => {
-      const tryAllocate = async (threads: number, scriptRam: number) => {
-        let neededThreads = threads
-        const allocations: AllocationItem[] = []
+    await this._lock.runExclusive(
+      async () => {
+        const tryAllocate = async (threads: number, scriptRam: number) => {
+          let neededThreads = threads
+          const allocations: AllocationItem[] = []
 
-        for (const allocatableServer of this.filteredAllocatableServers(filter)) {
-          // Escape early if we have allocated all needed threads
-          if (neededThreads <= 0) break
-
-          const [allocatedThreads, release] = allocatableServer.tryAllocateThreads(threads, scriptRam)
-
-          if (allocatedThreads > 0) {
-            allocations.push({
-              host: allocatableServer.name,
-              threads: allocatedThreads,
-              release,
-            })
-
-            neededThreads -= allocatedThreads
-          }
-        }
-
-        return allocations
-      }
-
-      await fn({
-        tryAllocate,
-        allocate: async (threads, scriptRam) => {
-          const attemptedAllocations = await tryAllocate(threads, scriptRam)
-          const totalAllocatedThreads = attemptedAllocations.reduce((sum, a) => sum + a.threads, 0)
-
-          if (totalAllocatedThreads < threads) {
-            for (const allocation of attemptedAllocations) {
-              allocation.release()
-            }
-
-            throw E_NOT_ENOUGH_RAM
-          }
-
-          return attemptedAllocations
-        },
-        allocateOne: async (threads, scriptRam) => {
           for (const allocatableServer of this.filteredAllocatableServers(filter)) {
-            try {
-              const [allocatedThreads, release] = allocatableServer.allocateThreads(threads, scriptRam)
+            // Escape early if we have allocated all needed threads
+            if (neededThreads <= 0) break
 
-              return {
+            const [allocatedThreads, release] = allocatableServer.tryAllocateThreads(threads, scriptRam)
+
+            if (allocatedThreads > 0) {
+              allocations.push({
                 host: allocatableServer.name,
                 threads: allocatedThreads,
                 release,
-              }
-            } catch (e) {
-              if (e !== E_NOT_ENOUGH_RAM) throw e
+              })
+
+              neededThreads -= allocatedThreads
             }
           }
-        },
-      })
-    }, priority)
+
+          return allocations
+        }
+
+        await fn({
+          tryAllocate,
+          allocate: async (threads, scriptRam) => {
+            const attemptedAllocations = await tryAllocate(threads, scriptRam)
+            const totalAllocatedThreads = attemptedAllocations.reduce((sum, a) => sum + a.threads, 0)
+
+            if (totalAllocatedThreads < threads) {
+              for (const allocation of attemptedAllocations) {
+                allocation.release()
+              }
+
+              throw E_NOT_ENOUGH_RAM
+            }
+
+            return attemptedAllocations
+          },
+          allocateOne: async (threads, scriptRam) => {
+            for (const allocatableServer of this.filteredAllocatableServers(filter)) {
+              try {
+                const [allocatedThreads, release] = allocatableServer.allocateThreads(threads, scriptRam)
+
+                return {
+                  host: allocatableServer.name,
+                  threads: allocatedThreads,
+                  release,
+                }
+              } catch (e) {
+                if (e !== E_NOT_ENOUGH_RAM) throw e
+              }
+            }
+          },
+        })
+      },
+      1,
+      priority,
+    )
   }
 }
 
