@@ -1,12 +1,13 @@
-import { useNetscript } from '@/lib/hooks/use-netscript'
-import { useServerMaxMoney } from '@/lib/queries/ns/use-server-max-money'
-import { useServerMoneyAvailable } from '@/lib/queries/ns/use-server-money-available'
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import Divider from '@mui/material/Divider'
 import Grid from '@mui/material/Grid'
 import Typography from '@mui/material/Typography'
 import React from 'react'
+
+import { useNetscript } from '@/lib/hooks/use-netscript'
+import { useServerMaxMoney } from '@/lib/queries/ns/use-server-max-money'
+import { useServerMoneyAvailable } from '@/lib/queries/ns/use-server-money-available'
 
 export interface ServerProps {
   server: string

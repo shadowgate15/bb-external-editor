@@ -2,6 +2,7 @@ import 'reflect-metadata'
 
 import { provide } from '@inversifyjs/binding-decorators'
 import { inject, injectable } from 'inversify'
+
 import { NSIdentifier } from '../ns.identifier'
 
 @injectable()

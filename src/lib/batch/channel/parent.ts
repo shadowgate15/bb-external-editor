@@ -1,7 +1,9 @@
-import { NSChannel } from '@/lib/channel'
-import { ChildChannelMethods, ParentChannelMethods } from './shared'
 import EventEmitter, { once } from 'node:events'
+
+import { NSChannel } from '@/lib/channel'
 import { randomNumber } from '@/lib/utils/random-number'
+
+import { ChildChannelMethods, ParentChannelMethods } from './shared'
 
 export interface ParentChannelEventMap {
   emit: [error: unknown, worker: number]

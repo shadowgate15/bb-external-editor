@@ -1,10 +1,12 @@
 import 'reflect-metadata'
 
-import { Container } from 'inversify'
-import { buildProviderModule } from '@inversifyjs/binding-decorators'
-import { NSIdentifier } from '@/lib/ns.identifier'
-import { BatchManager } from '@/lib/batch/manager'
 import { once } from 'node:events'
+
+import { buildProviderModule } from '@inversifyjs/binding-decorators'
+import { Container } from 'inversify'
+
+import { BatchManager } from '@/lib/batch/manager'
+import { NSIdentifier } from '@/lib/ns.identifier'
 import { ScriptAbortController } from '@/lib/utils/script-abort-controller'
 
 export async function main(ns: NS) {

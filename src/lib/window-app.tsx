@@ -1,9 +1,10 @@
-import { createPortal } from 'react-dom'
-import { findTailRoot, watchElForDeletion } from './bitburner-dom'
-import { NetscriptContext, TerminateContext, TailRootContext } from './context'
-import React from 'react'
 import { createTheme, Theme, ThemeProvider } from '@mui/material/styles'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import React from 'react'
+import { createPortal } from 'react-dom'
+
+import { findTailRoot, watchElForDeletion } from './bitburner-dom'
+import { NetscriptContext, TailRootContext, TerminateContext } from './context'
 
 function createThemeFromNS(ns: NS): Theme {
   const nsTheme = ns.ui.getTheme()

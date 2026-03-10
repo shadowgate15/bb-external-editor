@@ -1,9 +1,11 @@
 import { nuke } from '@home/deploy/nuke'
-import { assertIsString } from '@/lib/assert/is-string'
 import { NS } from '@ns'
+
+import { assertIsString } from '@/lib/assert/is-string'
+
+import { normalizeFlags } from './normalize-flags'
 import { prep } from './prep'
 import { runBatch } from './run-batch'
-import { normalizeFlags } from './normalize-flags'
 
 export async function main(ns: NS) {
   ns.disableLog('ALL')

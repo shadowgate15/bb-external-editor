@@ -1,5 +1,6 @@
-import { assertIsNumber } from '@/lib/assert/is-number'
 import { NS } from '@ns'
+
+import { assertIsNumber } from '@/lib/assert/is-number'
 
 export async function main(ns: NS) {
   const target = ns.args[0]

@@ -1,5 +1,6 @@
-import { useNetscript } from '@/lib/hooks/use-netscript'
 import { queryOptions, useQuery } from '@tanstack/react-query'
+
+import { useNetscript } from '@/lib/hooks/use-netscript'
 
 export function useServerMoneyAvailable(server: string) {
   const ns = useNetscript()

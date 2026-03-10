@@ -7,6 +7,7 @@ import css from '@eslint/css'
 import { defineConfig } from 'eslint/config'
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended'
 import pluginQuery from '@tanstack/eslint-plugin-query'
+import simpleImportSort from 'eslint-plugin-simple-import-sort'
 
 export default defineConfig([
   {
@@ -19,6 +20,16 @@ export default defineConfig([
     languageOptions: { globals: globals.browser },
   },
   tseslint.configs.recommended,
+  {
+    files: ['**/*.{js,mjs,cjs,jsx,mjsx,ts,tsx,mtsx}'],
+    plugins: {
+      'simple-import-sort': simpleImportSort,
+    },
+    rules: {
+      'simple-import-sort/imports': 'error',
+      'simple-import-sort/exports': 'error',
+    },
+  },
   {
     files: ['**/*.{js,mjs,cjs,jsx,mjsx,ts,tsx,mtsx}'],
     ...pluginReact.configs.flat.recommended,

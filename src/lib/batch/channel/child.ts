@@ -1,4 +1,5 @@
 import { NSChannel } from '@/lib/channel'
+
 import type { ChildChannelMethods, ParentChannelMethods } from './shared'
 
 export abstract class ChildChannel extends NSChannel<ChildChannelMethods, ParentChannelMethods> {

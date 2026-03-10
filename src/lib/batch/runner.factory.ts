@@ -2,11 +2,12 @@ import 'reflect-metadata'
 
 import { provide } from '@inversifyjs/binding-decorators'
 import { inject, injectable } from 'inversify'
+
 import { NSIdentifier } from '../ns.identifier'
-import { BatchFactory } from './batch.factory'
-import { BatchRunner } from './runner'
-import { PreperationLock } from './preperation-lock'
 import { ScriptAbortController } from '../utils/script-abort-controller'
+import { BatchFactory } from './batch.factory'
+import { PreperationLock } from './preperation-lock'
+import { BatchRunner } from './runner'
 
 @injectable()
 @provide(undefined, (bind) => {

@@ -1,7 +1,7 @@
-import _ from 'lodash'
-import { createRequire } from 'module'
 import { context } from 'esbuild'
 import { BitburnerPlugin } from 'esbuild-bitburner-plugin'
+import _ from 'lodash'
+import { createRequire } from 'module'
 import { nodeless } from 'unenv'
 
 /** @type {(plugin: import('esbuild').Plugin) => import('esbuild').Plugin} */

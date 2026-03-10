@@ -1,7 +1,8 @@
 import { once } from 'node:events'
+
+import { ScriptAbortController } from '../utils/script-abort-controller'
 import { BatchFactory } from './batch.factory'
 import { PreperationLock } from './preperation-lock'
-import { ScriptAbortController } from '../utils/script-abort-controller'
 
 export class BatchRunner {
   private readonly abortController = new AbortController()

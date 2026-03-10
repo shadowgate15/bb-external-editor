@@ -1,6 +1,7 @@
 import { nuke } from '@home/deploy/nuke'
 import { ServerList } from '@home/deploy/server-list'
 import { NS } from '@ns'
+
 import { normalizeFlags } from './normalize-flags'
 
 const GROW_SCRIPT = 'batch/grow.js'

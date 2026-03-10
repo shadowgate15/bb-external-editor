@@ -1,11 +1,12 @@
-import React from 'react'
-import { useNetscript } from '@/lib/hooks/use-netscript'
-import { useServerList } from '@/lib/hooks/use-server-list'
+import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import FormControl from '@mui/material/FormControl'
-import { ServerSelect } from '@/lib/components/server-select'
+import React from 'react'
+
 import { FitContent } from '@/lib/components/fit-content'
-import Box from '@mui/material/Box'
+import { ServerSelect } from '@/lib/components/server-select'
+import { useNetscript } from '@/lib/hooks/use-netscript'
+import { useServerList } from '@/lib/hooks/use-server-list'
 
 export function Prometheus() {
   const ns = useNetscript()

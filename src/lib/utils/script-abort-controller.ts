@@ -1,4 +1,5 @@
 import 'reflect-metadata'
+
 import { provide } from '@inversifyjs/binding-decorators'
 import { injectable } from 'inversify'
 

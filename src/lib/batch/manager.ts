@@ -1,11 +1,14 @@
+import 'reflect-metadata'
+
+import { EventEmitter } from 'node:events'
+
 import { provide } from '@inversifyjs/binding-decorators'
 import { inject, injectable } from 'inversify'
-import 'reflect-metadata'
+
 import { NSIdentifier } from '../ns.identifier'
 import { ServerList } from '../utils/server-list'
 import { BatchRunner } from './runner'
 import { BatchRunnerFactory } from './runner.factory'
-import { EventEmitter } from 'node:events'
 
 @injectable()
 @provide(undefined, (bind) => {

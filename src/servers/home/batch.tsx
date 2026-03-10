@@ -1,15 +1,17 @@
+import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
+import FormControl from '@mui/material/FormControl'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import Switch from '@mui/material/Switch'
+import React from 'react'
+
 import { FitContent } from '@/lib/components/fit-content'
 import { ServerSelect } from '@/lib/components/server-select'
 import { useNetscript } from '@/lib/hooks/use-netscript'
 import { useServerList } from '@/lib/hooks/use-server-list'
 import { mainWrapper } from '@/lib/window-app'
-import Box from '@mui/material/Box'
-import FormControl from '@mui/material/FormControl'
-import React from 'react'
+
 import { scoreServer, serversWithScoreAbove } from './deploy/get-target-server'
-import FormControlLabel from '@mui/material/FormControlLabel'
-import Switch from '@mui/material/Switch'
-import Button from '@mui/material/Button'
 
 export const main = mainWrapper(App)
 

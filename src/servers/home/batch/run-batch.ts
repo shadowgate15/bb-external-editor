@@ -1,6 +1,8 @@
 import { NS } from '@ns'
-import { NotEnoughRamError, ThreadCoordinator } from './thread-coordinator'
+
 import { randomNumber } from '@/lib/utils/random-number'
+
+import { NotEnoughRamError, ThreadCoordinator } from './thread-coordinator'
 
 const DELAY = 20
 

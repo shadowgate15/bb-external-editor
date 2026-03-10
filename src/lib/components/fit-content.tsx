@@ -1,6 +1,7 @@
 import React from 'react'
-import { useNetscript } from '../hooks/use-netscript'
 import { OnResizeCallback, useResizeDetector } from 'react-resize-detector'
+
+import { useNetscript } from '../hooks/use-netscript'
 
 export function FitContent({ children }: React.PropsWithChildren<object>) {
   const ns = useNetscript()

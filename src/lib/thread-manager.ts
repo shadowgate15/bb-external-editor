@@ -1,10 +1,12 @@
-import { provide } from '@inversifyjs/binding-decorators'
-import { inject, injectable } from 'inversify'
 import 'reflect-metadata'
-import { NSIdentifier } from './ns.identifier'
-import { ServerList } from './utils/server-list'
-import { RamChecker } from './utils/ram-checker'
+
+import { provide } from '@inversifyjs/binding-decorators'
 import { Mutex } from 'async-mutex'
+import { inject, injectable } from 'inversify'
+
+import { NSIdentifier } from './ns.identifier'
+import { RamChecker } from './utils/ram-checker'
+import { ServerList } from './utils/server-list'
 
 export interface EventMap {
   released: []

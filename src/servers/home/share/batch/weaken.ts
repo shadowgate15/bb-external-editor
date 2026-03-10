@@ -1,5 +1,6 @@
-import { ChildChannel } from '@/lib/batch/channel/child'
 import z from 'zod'
+
+import { ChildChannel } from '@/lib/batch/channel/child'
 
 const flagsSchema = z.object({
   target: z.string(),

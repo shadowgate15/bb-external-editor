@@ -1,4 +1,5 @@
 import { NS } from '@ns'
+
 import { ServerList } from './deploy/server-list'
 
 export async function main(ns: NS) {

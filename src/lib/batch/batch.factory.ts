@@ -1,12 +1,14 @@
+import 'reflect-metadata'
+
 import { provide } from '@inversifyjs/binding-decorators'
 import { inject, injectable } from 'inversify'
-import 'reflect-metadata'
+
 import { NSIdentifier } from '../ns.identifier'
-import { ThreadPlanner } from './planner'
-import { Batch } from './batch'
 import { ThreadManager } from '../thread-manager'
 import { Nuker } from '../utils/nuker'
 import { ScriptAbortController } from '../utils/script-abort-controller'
+import { Batch } from './batch'
+import { ThreadPlanner } from './planner'
 
 @injectable()
 @provide(undefined, (bind) => {

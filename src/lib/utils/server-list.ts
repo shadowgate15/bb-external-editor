@@ -1,9 +1,11 @@
 import 'reflect-metadata'
 
+import { EventEmitter } from 'node:events'
+
 import { provide } from '@inversifyjs/binding-decorators'
 import { inject, injectable } from 'inversify'
+
 import { NSIdentifier } from '../ns.identifier'
-import { EventEmitter } from 'node:events'
 import { Nuker } from './nuker'
 import { ScriptAbortController } from './script-abort-controller'
 

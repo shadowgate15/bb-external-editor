@@ -1,7 +1,8 @@
 import 'reflect-metadata'
 
-import { inject, injectable } from 'inversify'
 import { provide } from '@inversifyjs/binding-decorators'
+import { inject, injectable } from 'inversify'
+
 import { NSIdentifier } from '../ns.identifier'
 
 export interface Plan {
