@@ -22,27 +22,32 @@ export class BatchRunner {
   async start() {
     const preparationPriority = this.priority * -1
 
-    await this.preperationLock.runExclusive(
-      async () => {
-        if (this.abortController.signal.aborted) return
-
-        this.ns.toast(`Preparing "${this.target}" for hacking...`, 'info', null)
-
-        // Preration step
-        while (
-          this.ns.getServerSecurityLevel(this.target) > this.ns.getServerMinSecurityLevel(this.target) ||
-          this.ns.getServerMoneyAvailable(this.target) < this.ns.getServerMaxMoney(this.target)
-        ) {
+    if (
+      this.ns.getServerSecurityLevel(this.target) > this.ns.getServerMinSecurityLevel(this.target) ||
+      this.ns.getServerMoneyAvailable(this.target) < this.ns.getServerMaxMoney(this.target)
+    ) {
+      await this.preperationLock.runExclusive(
+        async () => {
           if (this.abortController.signal.aborted) return
 
-          const batch = this.batchFactory.create(this.target, preparationPriority)
+          this.ns.toast(`Preparing "${this.target}" for hacking...`, 'info', null)
 
-          await batch.tryRun()
-        }
-      },
-      1,
-      preparationPriority,
-    )
+          // Preration step
+          while (
+            this.ns.getServerSecurityLevel(this.target) > this.ns.getServerMinSecurityLevel(this.target) ||
+            this.ns.getServerMoneyAvailable(this.target) < this.ns.getServerMaxMoney(this.target)
+          ) {
+            if (this.abortController.signal.aborted) return
+
+            const batch = this.batchFactory.create(this.target, preparationPriority)
+
+            await batch.tryRun()
+          }
+        },
+        1,
+        preparationPriority,
+      )
+    }
 
     this.ns.toast(`Preparation of "${this.target}" is complete. Starting hack...`, 'success', null)
 
