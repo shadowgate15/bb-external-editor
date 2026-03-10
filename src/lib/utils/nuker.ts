@@ -20,26 +20,35 @@ export class Nuker {
       return
     }
 
+    let ports = 0
+
     if (this.ns.fileExists('BruteSSH.exe', 'home')) {
+      ports++
       this.ns.brutessh(server)
     }
 
     if (this.ns.fileExists('FTPCrack.exe', 'home')) {
+      ports++
       this.ns.ftpcrack(server)
     }
 
     if (this.ns.fileExists('relaySMTP.exe', 'home')) {
+      ports++
       this.ns.relaysmtp(server)
     }
 
     if (this.ns.fileExists('HTTPWorm.exe', 'home')) {
+      ports++
       this.ns.httpworm(server)
     }
 
     if (this.ns.fileExists('SQLInject.exe', 'home')) {
+      ports++
       this.ns.sqlinject(server)
     }
 
-    this.ns.nuke(server)
+    if (this.ns.getServerNumPortsRequired(server) <= ports) {
+      this.ns.nuke(server)
+    }
   }
 }
