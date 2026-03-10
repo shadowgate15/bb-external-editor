@@ -54,7 +54,7 @@ export class ThreadManager {
       if (this.ramChecker.getMaxRam(server) <= 0) continue
 
       if (!this._allocatableServers.has(server)) {
-        this._allocatableServers.set(server, new AllocatableServer(this.ramChecker, server))
+        this._allocatableServers.set(server, new AllocatableServer(this.ns, this.ramChecker, server))
       }
     }
   }
@@ -179,6 +179,7 @@ export class AllocatableServer {
   private _allocatedRam = 0
 
   constructor(
+    private readonly ns: NS,
     private readonly ramChecker: RamChecker,
 
     public readonly name: string,
@@ -221,7 +222,13 @@ export class AllocatableServer {
   }
 
   private _getAvailableRam() {
-    return this.ramChecker.getMaxRam(this.name) - this._allocatedRam
+    let available = this.ramChecker.getMaxRam(this.name) - this._allocatedRam
+
+    if (this.name === 'home') {
+      available -= Number(this.ns.read('home-reserved-ram.txt')) || 0
+    }
+
+    return available
   }
 }
 
