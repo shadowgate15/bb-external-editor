@@ -1,7 +1,7 @@
 import { Plan, ThreadPlanner } from './planner'
 import { EventEmitter } from 'node:events'
 import { createParentChannel, ParentChannelEventMap } from './channel/parent'
-import { AllocationItem, ThreadManager } from '../thread-manager-v2'
+import { AllocationItem, ThreadManager } from '../thread-manager'
 import { Nuker } from '../utils/nuker'
 import { ScriptAbortController } from '../utils/script-abort-controller'
 

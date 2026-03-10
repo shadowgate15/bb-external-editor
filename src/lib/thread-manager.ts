@@ -4,8 +4,7 @@ import 'reflect-metadata'
 import { NSIdentifier } from './ns.identifier'
 import { ServerList } from './utils/server-list'
 import { RamChecker } from './utils/ram-checker'
-import { Semaphore } from './utils/semaphore'
-import { E_ALREADY_LOCKED, SemaphoreInterface, tryAcquire } from 'async-mutex'
+import { Mutex } from 'async-mutex'
 
 export interface EventMap {
   released: []
@@ -15,9 +14,9 @@ export interface AllocationItem {
   /** The host that was allocated */
   host: string
   /** How many threads were allocated on the host */
-  weight: number
+  threads: number
   /** The function to call to release the allocated threads when they are no longer needed */
-  release: SemaphoreInterface.Releaser
+  release: () => void
 }
 
 @injectable()
@@ -25,24 +24,9 @@ export interface AllocationItem {
   bind.inSingletonScope()
 })
 export class ThreadManager {
-  // TODO: chagne this to a custom thread pool that tracks the RAM allocation
-  // then use a mutex to lock access to the pool.
-  // Hopefully this will reduce the event loop burden, because each time a realease happens
-  // the semaphore is iterating over it's queue to find the next waiting acquire that can be fulfilled,
-  // which can cause some lag when there are a lot of waiting acquires and releases happening at the same time
-  private semaphoresMap: Map<string, Semaphore> = new Map()
+  private readonly _mutex = new Mutex()
 
-  private get semaphores(): [host: string, semaphore: Semaphore][] {
-    return Array.from(this.semaphoresMap.entries()).sort((a, b) => {
-      // If one of the servers is "home", prioritize it, since we want to run as many threads as possible on our own server before using up resources on other servers
-      if (a[0] === 'home') return -1
-      if (b[0] === 'home') return 1
-
-      return b[1].getMaxValue() - a[1].getMaxValue()
-    })
-  }
-
-  readonly threadLock = new Semaphore(0)
+  private readonly _allocatableServers = new Map<string, AllocatableServer>()
 
   constructor(
     @inject(NSIdentifier)
@@ -56,144 +40,196 @@ export class ThreadManager {
   ) {
     this.ns.print('INFO ThreadManager Initialized')
 
-    this.setupSemaphores()
+    this._setup()
 
     this.serverList.on('serverAdded', () => {
-      this.setupSemaphores()
+      this._setup()
     })
   }
 
-  private getMaxRam(server: string) {
-    let maxRam = this.ramChecker.getMaxRam(server)
-
-    if (server === 'home') {
-      maxRam -= Number(this.ns.read('home-reserved-ram.txt')) || 0
-    }
-
-    return maxRam
-  }
-
-  private setupSemaphores() {
+  private _setup() {
     const servers = this.serverList.getAll()
 
     for (const server of servers) {
-      // Have to have root access to the server and some RAM to run threads on it, otherwise we can't run anything on it
-      if (this.ns.hasRootAccess(server) && this.ramChecker.getMaxRam(server) > 0) {
-        const maxRam = this.getMaxRam(server)
+      if (this.ramChecker.getMaxRam(server) <= 0) continue
 
-        if (maxRam <= 0) {
-          continue
+      if (!this._allocatableServers.has(server)) {
+        this._allocatableServers.set(server, new AllocatableServer(this.ns, this.ramChecker, server))
+      }
+    }
+  }
+
+  private get _sortedAllocatableServers() {
+    return Array.from(this._allocatableServers.values()).sort((a, b) => {
+      // If one of the servers is "home", prioritize it, since we want to run as many threads as possible on our own server before using up resources on other servers
+      if (a[0] === 'home') return -1
+      if (b[0] === 'home') return 1
+
+      const diff = this.ramChecker.getMaxRam(b.name) - this.ramChecker.getMaxRam(a.name)
+
+      if (diff !== 0) return diff
+
+      return a.name.localeCompare(b.name)
+    })
+  }
+
+  private filteredAllocatableServers(filter?: (server: string) => boolean) {
+    if (filter) {
+      return this._sortedAllocatableServers.filter((s) => filter(s.name))
+    }
+
+    return this._sortedAllocatableServers
+  }
+
+  async advancedAllocate(
+    fn: (controller: AdvandedAllocationController) => Promise<void>,
+    priority?: number,
+    filter?: (server: string) => boolean,
+  ) {
+    await this._mutex.runExclusive(async () => {
+      const tryAllocate = async (threads: number, scriptRam: number) => {
+        let neededThreads = threads
+        const allocations: AllocationItem[] = []
+
+        for (const allocatableServer of this.filteredAllocatableServers(filter)) {
+          // Escape early if we have allocated all needed threads
+          if (neededThreads <= 0) break
+
+          const [allocatedThreads, release] = allocatableServer.tryAllocateThreads(threads, scriptRam)
+
+          if (allocatedThreads > 0) {
+            allocations.push({
+              host: allocatableServer.name,
+              threads: allocatedThreads,
+              release,
+            })
+
+            neededThreads -= allocatedThreads
+          }
         }
 
-        if (this.semaphoresMap.has(server)) {
-          const semaphore = this.semaphoresMap.get(server)
+        return allocations
+      }
 
-          if (semaphore === undefined) {
-            throw new Error('Semaphore should be defined since we checked it with has()')
+      await fn({
+        tryAllocate,
+        allocate: async (threads, scriptRam) => {
+          const attemptedAllocations = await tryAllocate(threads, scriptRam)
+          const totalAllocatedThreads = attemptedAllocations.reduce((sum, a) => sum + a.threads, 0)
+
+          if (totalAllocatedThreads < threads) {
+            for (const allocation of attemptedAllocations) {
+              allocation.release()
+            }
+
+            throw E_NOT_ENOUGH_RAM
           }
 
-          if (semaphore.getMaxValue() !== maxRam) {
-            // Update the value of the existing semaphore to reflect any changes in the server's RAM
-            const diff = semaphore.setMaxValue(maxRam)
-            this.threadLock.addToMaxValue(diff)
+          return attemptedAllocations
+        },
+        allocateOne: async (threads, scriptRam) => {
+          for (const allocatableServer of this.filteredAllocatableServers(filter)) {
+            try {
+              const [allocatedThreads, release] = allocatableServer.allocateThreads(threads, scriptRam)
+
+              return {
+                host: allocatableServer.name,
+                threads: allocatedThreads,
+                release,
+              }
+            } catch (e) {
+              if (e !== E_NOT_ENOUGH_RAM) throw e
+            }
           }
-        } else {
-          const semaphore = new Semaphore(maxRam)
-
-          // Add a new semaphore for the server, with the initial value set to the server's max RAM
-          this.semaphoresMap.set(server, semaphore)
-          this.threadLock.addToMaxValue(maxRam)
-        }
-      }
-    }
-  }
-
-  async tryAllocate(
-    weight?: number,
-    priority = 0,
-    bucketRam: number | undefined = undefined,
-  ): Promise<{ unallocated: number; allocated: AllocationItem[] }> {
-    let neededWeight = weight ?? 1
-
-    const allocations: AllocationItem[] = []
-
-    for (const [host, semaphore] of this.semaphores) {
-      try {
-        const assignedWeight = Math.min(this.getMaxPossibleWeight(semaphore, bucketRam), neededWeight)
-
-        if (assignedWeight === 0) {
-          throw E_ALREADY_LOCKED
-        }
-
-        const [, release] = await tryAcquire(semaphore).acquire(assignedWeight, priority)
-
-        const returnedWeight = Math.ceil(bucketRam ? assignedWeight / bucketRam : assignedWeight)
-        allocations.push({
-          host,
-          weight: returnedWeight,
-          release,
-        })
-        neededWeight -= assignedWeight
-
-        if (neededWeight <= 0) {
-          break
-        }
-      } catch (e) {
-        if (e !== E_ALREADY_LOCKED) throw e
-      }
-    }
-
-    return {
-      unallocated: neededWeight,
-      allocated: allocations,
-    }
-  }
-
-  async tryAllocateToOne(weight?: number, priority = 0, bucketRam: number | undefined = undefined) {
-    const neededWeight = weight ?? 1
-    const semaphoresWithEnoughWeight = this.semaphores.filter(
-      ([_, semaphore]) => this.getMaxPossibleWeight(semaphore, bucketRam) >= neededWeight,
-    )
-
-    let allocation: AllocationItem | null = null
-
-    for (const [host, semaphore] of semaphoresWithEnoughWeight) {
-      try {
-        const [, release] = await tryAcquire(semaphore).acquire(neededWeight, priority)
-
-        const returnedWeight = Math.ceil(bucketRam ? neededWeight / bucketRam : neededWeight)
-        allocation = {
-          host,
-          weight: returnedWeight,
-          release,
-        }
-
-        break
-      } catch (e) {
-        if (e !== E_ALREADY_LOCKED) throw e
-      }
-    }
-
-    if (allocation === null) {
-      throw E_NOT_ENOUGH_RESOURCES
-    }
-
-    return allocation
-  }
-
-  /**
-   * Gets the max weight that can be allocated on the given semaphore,
-   * taking into account the bucket RAM if it is provided
-   */
-  private getMaxPossibleWeight(semaphore: Semaphore, bucketRam: number | undefined) {
-    const value = semaphore.getValue()
-
-    if (bucketRam === undefined) return value
-
-    const maxBuckets = Math.floor(value / bucketRam)
-
-    return maxBuckets * bucketRam
+        },
+      })
+    }, priority)
   }
 }
 
-export const E_NOT_ENOUGH_RESOURCES = new Error('Not enough resources available to allocate the requested weight')
+export interface AllocationItem {
+  /** The host that was allocated */
+  host: string
+  /** How many threads were allocated on the host */
+  threads: number
+  /** The function to call to release the allocated threads when they are no longer needed */
+  release: () => void
+}
+
+export interface AdvandedAllocationController {
+  /**
+   * Allocates the requested number of threads on a single server.
+   * If there is not enough RAM available on any single server, it will throw an error.
+   */
+  allocateOne(threads: number, scriptRam: number): Promise<AllocationItem>
+
+  /**
+   * Allocates the requested number of threads on multiple servers.
+   * If there is not enough RAM available on any single server, it will throw an error.
+   */
+  allocate(threads: number, scriptRam: number): Promise<AllocationItem[]>
+
+  /**
+   * Allocates as many threads as possible on multiple servers up to the requested number of threads.
+   */
+  tryAllocate(threads: number, scriptRam: number): Promise<AllocationItem[]>
+}
+
+export class AllocatableServer {
+  private _allocatedRam = 0
+
+  constructor(
+    private readonly ns: NS,
+    private readonly ramChecker: RamChecker,
+
+    public readonly name: string,
+  ) {}
+
+  /**
+   * Allocates threads on this server.
+   * The returned release function must be called when the threads are no longer needed to free up the allocated RAM.
+   * This will either allocate the requested number of threads or throw an error if there is not enough RAM available.
+   */
+  allocateThreads(threads: number, scriptRam: number): [allocatedThreads: number, release: () => void] {
+    const [threadsToAllocate, release] = this.tryAllocateThreads(threads, scriptRam)
+
+    if (threadsToAllocate === 0) {
+      release()
+
+      throw E_NOT_ENOUGH_RAM
+    }
+
+    return [threadsToAllocate, release]
+  }
+
+  /**
+   * Tries to allocate threads on this server. If there is not enough RAM available, it will allocate as many threads as possible.
+   * The returned release function must be called when the threads are no longer needed to free up the allocated RAM.
+   */
+  tryAllocateThreads(threads: number, scriptRam: number): [allocatedThreads: number, release: () => void] {
+    const maxPossibleThreads = Math.floor(this._getAvailableRam() / scriptRam)
+    const threadsToAllocate = Math.min(threads, maxPossibleThreads)
+    const ramToAllocate = threadsToAllocate * scriptRam
+
+    this._allocatedRam += ramToAllocate
+
+    return [
+      threadsToAllocate,
+      () => {
+        this._allocatedRam -= ramToAllocate
+      },
+    ]
+  }
+
+  private _getAvailableRam() {
+    let available = this.ramChecker.getMaxRam(this.name) - this._allocatedRam
+
+    if (this.name === 'home') {
+      available -= Number(this.ns.read('home-reserved-ram.txt')) || 0
+    }
+
+    return available
+  }
+}
+
+export const E_NOT_ENOUGH_RAM = new Error('Not enough RAM available to allocate threads')

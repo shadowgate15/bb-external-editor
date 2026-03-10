@@ -4,7 +4,7 @@ import 'reflect-metadata'
 import { NSIdentifier } from '../ns.identifier'
 import { ThreadPlanner } from './planner'
 import { Batch } from './batch'
-import { ThreadManager } from '../thread-manager-v2'
+import { ThreadManager } from '../thread-manager'
 import { Nuker } from '../utils/nuker'
 import { ScriptAbortController } from '../utils/script-abort-controller'
 
