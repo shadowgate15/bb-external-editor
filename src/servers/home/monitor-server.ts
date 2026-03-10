@@ -12,6 +12,10 @@ export async function main(ns: NS) {
 
   ns.ui.openTail()
 
+  ns.atExit(() => {
+    ns.ui.closeTail()
+  })
+
   while (true) {
     ns.clearLog()
     ns.print(`Monitoring server: ${target}`)

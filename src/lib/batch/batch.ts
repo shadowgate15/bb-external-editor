@@ -67,19 +67,19 @@ export class Batch extends EventEmitter<EventMap> {
         const weakenHackAllocations = await controller
           .allocate(weakenHackThreads, this.WEAKEN_SCRIPT_RAM)
           .catch((e) => {
-            this.releaseAllocations(hackAllocations)
+            releaseAllocations(hackAllocations)
 
             throw e
           })
         const growAllocation = await controller.allocateOne(growThreads, this.GROW_SCRIPT_RAM).catch((e) => {
-          this.releaseAllocations([...hackAllocations, ...weakenHackAllocations])
+          releaseAllocations([...hackAllocations, ...weakenHackAllocations])
 
           throw e
         })
         const weakenGrowAllocations = await controller
           .allocate(weakenGrowThreads, this.WEAKEN_SCRIPT_RAM)
           .catch((e) => {
-            this.releaseAllocations([...hackAllocations, ...weakenHackAllocations, growAllocation])
+            releaseAllocations([...hackAllocations, ...weakenHackAllocations, growAllocation])
 
             throw e
           })
@@ -118,33 +118,48 @@ export class Batch extends EventEmitter<EventMap> {
     await pDeploy
   }
 
-  private async releaseAllocations(allocations: AllocationItem[]) {
-    for (const allocation of allocations) {
-      allocation.release()
-    }
-  }
-
   private async _deploy(
     plan: Plan,
     [hackAllocations, weakenHackAllocations, growAllocations, weakenGrowAllocations]: AllocationItem[][],
   ) {
     const { hackDelay, growDelay, weakenGrowDelay, weakenHackDelay } = plan
 
+    /** Will be true once we release the batch,
+     * either due to an error or because all workers are ready and we've emitted the release event */
+    let released = false
     let readyCount = 0
     const total =
       hackAllocations.length + weakenHackAllocations.length + growAllocations.length + weakenGrowAllocations.length
 
     const emitter = new EventEmitter<ParentChannelEventMap>()
 
+    const readyTimeout = setTimeout(() => {
+      this.ns.print('ERROR Timeout waiting for workers to be ready', {
+        readyCount,
+        total,
+        plan,
+        hackAllocations,
+        weakenHackAllocations,
+        growAllocations,
+        weakenGrowAllocations,
+      })
+    }, 5000)
+
     const abortController = new AbortController()
     this.scriptAbortController.childController(abortController)
+
+    abortController.signal.addEventListener('abort', () => {
+      clearTimeout(readyTimeout)
+    })
 
     emitter.on('ready', () => {
       readyCount++
 
       if (readyCount === total) {
+        clearTimeout(readyTimeout)
         emitter.emit('startTime', Date.now() + 100)
         this.emit('release')
+        released = true
       }
     })
 
@@ -160,11 +175,17 @@ export class Batch extends EventEmitter<EventMap> {
     })
 
     await Promise.all([
-      this._deployHack(hackDelay, hackAllocations, emitter, abortController.signal),
-      this._deployWeaken(weakenHackDelay, weakenHackAllocations, emitter, abortController.signal),
-      this._deployGrow(growDelay, growAllocations, emitter, abortController.signal),
-      this._deployWeaken(weakenGrowDelay, weakenGrowAllocations, emitter, abortController.signal),
-    ])
+      this._deployHack(hackDelay, hackAllocations, emitter, abortController),
+      this._deployWeaken(weakenHackDelay, weakenHackAllocations, emitter, abortController),
+      this._deployGrow(growDelay, growAllocations, emitter, abortController),
+      this._deployWeaken(weakenGrowDelay, weakenGrowAllocations, emitter, abortController),
+    ]).finally(() => {
+      if (!released) {
+        this.emit('release')
+      }
+
+      releaseAllocations([...hackAllocations, ...weakenHackAllocations, ...growAllocations, ...weakenGrowAllocations])
+    })
   }
 
   private _makeDeploy(script: string) {
@@ -172,15 +193,21 @@ export class Batch extends EventEmitter<EventMap> {
       delay: number,
       allocations: AllocationItem[],
       emitter: EventEmitter<ParentChannelEventMap>,
-      abortSignal: AbortSignal,
+      abortController: AbortController,
     ) => {
       return Promise.all(
         allocations.map(async (allocation) => {
+          if (abortController.signal.aborted) return
+
           this.nuker.nuke(allocation.host)
 
           this.ns.scp(script, allocation.host)
 
           const [channel, parent, child] = createParentChannel(this.ns, emitter, delay)
+
+          abortController.signal.addEventListener('abort', () => {
+            channel.close()
+          })
 
           const listenPromise = channel.listen()
 
@@ -202,14 +229,21 @@ export class Batch extends EventEmitter<EventMap> {
             ...args,
           )
 
-          abortSignal.addEventListener('abort', () => {
+          if (pid === 0) {
+            this.ns.print(
+              `ERROR Failed to start script ${script} on host ${allocation.host} with args ${args.join(' ')}`,
+            )
+
+            abortController.abort()
+
+            return
+          }
+
+          abortController.signal.addEventListener('abort', () => {
             this.ns.kill(pid)
-            channel.close()
           })
 
-          return listenPromise.finally(() => {
-            allocation.release()
-          })
+          return listenPromise
         }),
       )
     }
@@ -221,5 +255,11 @@ export class Batch extends EventEmitter<EventMap> {
 
   private _serverFilter(server: string) {
     return this.ns.hasRootAccess(server)
+  }
+}
+
+function releaseAllocations(allocations: AllocationItem[]) {
+  for (const allocation of allocations) {
+    allocation.release()
   }
 }
