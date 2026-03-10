@@ -134,30 +134,13 @@ export class Batch extends EventEmitter<EventMap> {
 
     const emitter = new EventEmitter<ParentChannelEventMap>()
 
-    const readyTimeout = setTimeout(() => {
-      this.ns.print('ERROR Timeout waiting for workers to be ready', {
-        readyCount,
-        total,
-        plan,
-        hackAllocations,
-        weakenHackAllocations,
-        growAllocations,
-        weakenGrowAllocations,
-      })
-    }, 5000)
-
     const abortController = new AbortController()
     this.scriptAbortController.childController(abortController)
-
-    abortController.signal.addEventListener('abort', () => {
-      clearTimeout(readyTimeout)
-    })
 
     emitter.on('ready', () => {
       readyCount++
 
       if (readyCount === total) {
-        clearTimeout(readyTimeout)
         emitter.emit('startTime', Date.now() + 100)
         this.emit('release')
         released = true
@@ -184,8 +167,6 @@ export class Batch extends EventEmitter<EventMap> {
       if (!released) {
         this.emit('release')
       }
-
-      releaseAllocations([...hackAllocations, ...weakenHackAllocations, ...growAllocations, ...weakenGrowAllocations])
     })
   }
 
@@ -198,53 +179,61 @@ export class Batch extends EventEmitter<EventMap> {
     ) => {
       return Promise.all(
         allocations.map(async (allocation) => {
-          if (abortController.signal.aborted) return
+          try {
+            if (abortController.signal.aborted) return
 
-          this.nuker.nuke(allocation.host)
+            this.nuker.nuke(allocation.host)
 
-          this.ns.scp(script, allocation.host)
+            this.ns.scp(script, allocation.host)
 
-          const [channel, parent, child] = createParentChannel(this.ns, emitter, delay)
+            const [channel, parent, child] = createParentChannel(this.ns, emitter, delay)
 
-          abortController.signal.addEventListener('abort', () => {
-            channel.close()
-          })
+            abortController.signal.addEventListener('abort', () => {
+              channel.close()
+            })
 
-          const listenPromise = channel.listen()
+            const listenPromise = channel.listen()
 
-          const args = [
-            ['--target', this.target],
-            ['--from', child],
-            ['--to', parent],
-          ].flat()
+            const args = [
+              ['--target', this.target],
+              ['--from', child],
+              ['--to', parent],
+            ].flat()
 
-          const pid = this.ns.exec(
-            script,
-            allocation.host,
-            {
-              threads: allocation.threads,
-              temporary: true,
-              // To account for zod
-              ramOverride: this.ns.getScriptRam(script) - 1,
-            },
-            ...args,
-          )
-
-          if (pid === 0) {
-            this.ns.print(
-              `ERROR Failed to start script ${script} on host ${allocation.host} with args ${args.join(' ')}`,
+            const pid = this.ns.exec(
+              script,
+              allocation.host,
+              {
+                threads: allocation.threads,
+                temporary: true,
+                // To account for zod
+                ramOverride: this.ns.getScriptRam(script) - 1,
+              },
+              ...args,
             )
 
+            if (pid === 0) {
+              this.ns.print(
+                `ERROR Failed to start script ${script} on host ${allocation.host} with args ${args.join(' ')}`,
+              )
+
+              throw E_FAILED_TO_START_SCRIPT
+            }
+
+            abortController.signal.addEventListener('abort', () => {
+              this.ns.kill(pid)
+            })
+
+            return listenPromise
+          } catch (error) {
             abortController.abort()
 
-            return
+            if (error !== E_FAILED_TO_START_SCRIPT) {
+              throw error
+            }
+          } finally {
+            allocation.release()
           }
-
-          abortController.signal.addEventListener('abort', () => {
-            this.ns.kill(pid)
-          })
-
-          return listenPromise
         }),
       )
     }
@@ -258,6 +247,8 @@ export class Batch extends EventEmitter<EventMap> {
     return this.ns.hasRootAccess(server)
   }
 }
+
+const E_FAILED_TO_START_SCRIPT = new Error('Failed to start script')
 
 function releaseAllocations(allocations: AllocationItem[]) {
   for (const allocation of allocations) {
