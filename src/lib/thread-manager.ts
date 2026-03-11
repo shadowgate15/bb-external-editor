@@ -13,6 +13,7 @@ export interface EventMap {
 }
 
 export interface AllocationItem {
+  id: string
   /** The host that was allocated */
   host: string
   /** How many threads were allocated on the host */
@@ -26,7 +27,7 @@ export interface AllocationItem {
   bind.inSingletonScope()
 })
 export class ThreadManager {
-  private readonly _lock = new Semaphore(5)
+  private readonly _lock = new Semaphore(1)
 
   private readonly _allocatableServers = new Map<string, AllocatableServer>()
 
@@ -106,6 +107,7 @@ export class ThreadManager {
 
             if (allocatedThreads > 0) {
               allocations.push({
+                id: crypto.randomUUID(),
                 host: allocatableServer.name,
                 threads: allocatedThreads,
                 release,
@@ -134,12 +136,13 @@ export class ThreadManager {
 
             return attemptedAllocations
           },
-          allocateOne: async (threads, scriptRam) => {
+          allocateOne: async (threads, scriptRam): Promise<AllocationItem> => {
             for (const allocatableServer of this.filteredAllocatableServers(filter)) {
               try {
                 const [allocatedThreads, release] = allocatableServer.allocateThreads(threads, scriptRam)
 
                 return {
+                  id: crypto.randomUUID(),
                   host: allocatableServer.name,
                   threads: allocatedThreads,
                   release,
@@ -220,6 +223,15 @@ export class AllocatableServer {
     const maxPossibleThreads = Math.floor(this._getAvailableRam() / scriptRam)
     const threadsToAllocate = Math.min(threads, maxPossibleThreads)
     const ramToAllocate = threadsToAllocate * scriptRam
+
+    if (maxPossibleThreads < threads) {
+      console.log('Found a server that cannot allocate the requested number of threads, skipping it', {
+        name: this.name,
+        maxRam: this.ramChecker.getMaxRam(this.name),
+        allocatedRam: this._allocatedRam,
+        neededRam: threads * scriptRam,
+      })
+    }
 
     this._allocatedRam += ramToAllocate
 

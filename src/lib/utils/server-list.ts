@@ -15,10 +15,8 @@ interface EventMap {
   servers: []
 }
 
-@injectable()
-@provide(undefined, (bind) => {
-  bind.inSingletonScope()
-})
+@injectable('Singleton')
+@provide()
 export class ServerList extends EventEmitter<EventMap> {
   private servers: Set<string> = new Set()
 

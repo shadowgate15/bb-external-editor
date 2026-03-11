@@ -19,6 +19,10 @@ export class BatchManager extends EventEmitter<{
 }> {
   private readonly batchRunners = new Map<string, BatchRunner>()
 
+  private batchRunner: BatchRunner | null = null
+
+  private score: number = 0
+
   constructor(
     @inject(NSIdentifier)
     private readonly ns: NS,
@@ -47,7 +51,7 @@ export class BatchManager extends EventEmitter<{
   private setupBatches() {
     const servers = this.serverList
       .getAll()
-      .filter((server) => this.validHackingLevel(server) && !this.batchRunners.has(server))
+      .filter((server) => this.validHackingLevel(server) && this.ns.hasRootAccess(server))
       .map((server) => {
         const score = this.ns.getServerMaxMoney(server) / this.ns.getServerMinSecurityLevel(server)
 
@@ -56,12 +60,17 @@ export class BatchManager extends EventEmitter<{
       .filter(([_, score]) => score > 0)
       .sort((a, b) => b[1] - a[1])
 
-    servers.forEach(([server, score]) => {
-      const batchRunner = this.batchRunnerFactory.create(server, score * -1)
-      batchRunner.start()
+    const [server, score] = servers.shift()
 
-      this.batchRunners.set(server, batchRunner)
-    })
+    if (score > this.score) {
+      this.score = score
+
+      // Kill current batch runner if it exists
+      this.batchRunner?.stop()
+
+      this.batchRunner = this.batchRunnerFactory.create(server, score)
+      this.batchRunner.start()
+    }
   }
 
   private validHackingLevel(server: string) {

@@ -15,7 +15,7 @@ export class PreperationLock extends Semaphore {
     @inject(NSIdentifier)
     private readonly ns: NS,
   ) {
-    super(2)
+    super(5)
 
     this.ns.print('INFO PreperationLock Initialized')
   }

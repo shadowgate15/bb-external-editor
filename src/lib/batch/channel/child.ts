@@ -11,13 +11,16 @@ export abstract class ChildChannel extends NSChannel<ChildChannelMethods, Parent
   ) {
     super(ns, from, to)
 
+    this.ns.atExit(() => {
+      this.send('complete')
+    }, crypto.randomUUID())
+
     this.server.addMethod('startTime', async (startTime) => {
       ns.print(`INFO Worker ${this.to} starting at time ${new Date(startTime).toLocaleString()}`)
 
       await this.process(startTime)
         .then(() => {
           ns.print(`SUCCESS Worker ${this.to} complete`)
-          this.send('complete')
         })
         .catch((error) => {
           this.send('error', error)

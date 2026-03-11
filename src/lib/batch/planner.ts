@@ -35,22 +35,18 @@ export class ThreadPlanner {
     const maxMoney = this.ns.getServerMaxMoney(target)
     const availableMoney = this.ns.getServerMoneyAvailable(target)
 
-    const shouldHack = availableMoney >= maxMoney
-
     const growTime = this.ns.getGrowTime(target)
     const weakenTime = this.ns.getWeakenTime(target)
     const hackTime = this.ns.getHackTime(target)
 
-    const hackMoney = shouldHack ? maxMoney * 0.2 : 0
+    const hackMoney = maxMoney * 0.2
     // This should be a positive number, but just in case hackAnalyzeThreads returns a negative number, we set it to 0
     const hackThreads = Math.max(Math.floor(this.ns.hackAnalyzeThreads(target, hackMoney)), 0)
     const hackDelay = weakenTime - hackTime - DELAY
-    const hackSecurityIncrease = shouldHack
-      ? this.ns.hackAnalyzeSecurity(hackThreads, target)
-      : this.ns.getServerSecurityLevel(target) - this.ns.getServerMinSecurityLevel(target)
+    const hackSecurityIncrease = this.ns.hackAnalyzeSecurity(hackThreads, target)
 
-    const postHackMoney = shouldHack ? availableMoney - hackMoney : maxMoney - availableMoney
-    const growMultiplier = shouldHack && postHackMoney > 0 ? maxMoney / postHackMoney : maxMoney
+    const postHackMoney = availableMoney - hackMoney
+    const growMultiplier = postHackMoney > 0 ? maxMoney / postHackMoney : maxMoney
     const growThreads = Math.max(Math.ceil(this.ns.growthAnalyze(target, growMultiplier)), 0)
     const growDelay = weakenTime - growTime + DELAY
     // Don't provide target because the target is fully grown,
@@ -70,6 +66,38 @@ export class ThreadPlanner {
       weakenGrowThreads,
       weakenGrowDelay: DELAY * 2,
       totalThreads: hackThreads + growThreads + weakenHackThreads + weakenGrowThreads,
+    }
+  }
+
+  planPrep(target: string): Plan {
+    const maxMoney = this.ns.getServerMaxMoney(target)
+    const availableMoney = this.ns.getServerMoneyAvailable(target)
+    const minSecurity = this.ns.getServerMinSecurityLevel(target)
+
+    const growTime = this.ns.getGrowTime(target)
+    const weakenTime = this.ns.getWeakenTime(target)
+
+    const growMultiplier = availableMoney > 0 ? maxMoney / availableMoney : maxMoney
+    const growThreads = Math.max(Math.ceil(this.ns.growthAnalyze(target, growMultiplier)), 0)
+    const growDelay = weakenTime - growTime + DELAY
+    const growSecurityIncrease = this.ns.growthAnalyzeSecurity(growThreads)
+
+    const currentSecurity = this.ns.getServerSecurityLevel(target)
+    const securityToReduce = currentSecurity - minSecurity
+
+    const weakenHackThreads = this.calculateWeakenThreads(securityToReduce)
+    const weakenGrowThreads = this.calculateWeakenThreads(growSecurityIncrease)
+
+    return {
+      hackThreads: 0,
+      hackDelay: 0,
+      growThreads,
+      growDelay,
+      weakenHackThreads: weakenHackThreads,
+      weakenHackDelay: 0,
+      weakenGrowThreads: weakenGrowThreads,
+      weakenGrowDelay: DELAY * 2,
+      totalThreads: growThreads + weakenHackThreads + weakenGrowThreads,
     }
   }
 
