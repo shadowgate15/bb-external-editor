@@ -245,7 +245,18 @@ export class Batch {
 
       await Promise.all(
         processes
-          .map(([, processes]) => processes)
+          .map(([unallocated, processes]) => {
+            if (unallocated > 0) {
+              // We are going to mark the unallocated threads as ready
+              // so that the batch can start with the threads that were allocated,
+              subject.next({
+                type: 'ready',
+                threads: unallocated,
+              })
+            }
+
+            return processes
+          })
           .flat()
           .map((process) => process()),
       )

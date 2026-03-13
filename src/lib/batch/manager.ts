@@ -59,7 +59,6 @@ export class BatchManager extends EventEmitter<{
       })
       .filter(([_, score]) => score > 0)
       .sort((a, b) => b[1] - a[1])
-      .filter(([server]) => server === 'n00dles')
 
     const [server, score] = servers.shift()
 
