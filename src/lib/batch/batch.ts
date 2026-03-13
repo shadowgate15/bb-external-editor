@@ -1,11 +1,20 @@
-import { EventEmitter } from 'node:events'
+import { filter, lastValueFrom, Observable, Subject, Subscriber } from 'rxjs'
 
-import { Subject } from 'rxjs'
-
-import { AllocationItem, ThreadManager } from '../thread-manager'
+import {
+  AdvandedAllocationController,
+  AllocationItem,
+  ThreadManager,
+  UnallocatableServerError,
+} from '../thread-manager'
 import { Nuker } from '../utils/nuker'
 import { ScriptAbortController } from '../utils/script-abort-controller'
-import { createParentChannel, errorEventFilter, ParentChannelSubject, readyEventFilter } from './channel/parent'
+import {
+  createParentChannel,
+  errorEventFilter,
+  ParentChannelSubject,
+  pongEventFilter,
+  readyEventFilter,
+} from './channel/parent'
 import { Plan, ThreadPlanner } from './planner'
 
 export interface EventMap {
@@ -15,7 +24,7 @@ export interface EventMap {
 /**
  * This class is responsible for coordinating the four scripts in a batch
  */
-export class Batch extends EventEmitter<EventMap> {
+export class Batch {
   private readonly HACK_SCRIPT = 'share/batch/hack.js'
   private readonly GROW_SCRIPT = 'share/batch/grow.js'
   private readonly WEAKEN_SCRIPT = 'share/batch/weaken.js'
@@ -41,9 +50,7 @@ export class Batch extends EventEmitter<EventMap> {
 
     /** Priority of the batch, higher priority batches will be executed first when there are multiple batches waiting to run */
     private readonly priority: number = 0,
-  ) {
-    super()
-  }
+  ) {}
 
   /**
    * This will only run if all threads for the batch can be allocated,
@@ -59,80 +66,44 @@ export class Batch extends EventEmitter<EventMap> {
    * (for example, by retrying after some time or by logging the error and moving on to the next batch).
    */
   async run() {
-    let pDeploy: Promise<void>
+    return lastValueFrom(
+      new Observable<void>((subscriber) => {
+        this.threadManager
+          .advancedAllocate(
+            async (controller) => {
+              const plan = this.threadPlanner.plan(this.target)
 
-    await this.threadManager.advancedAllocate(
-      async (controller) => {
-        const plan = this.threadPlanner.plan(this.target)
-        const { hackThreads, weakenHackThreads, growThreads, weakenGrowThreads } = plan
-
-        const hackAllocations = await controller.allocate(hackThreads, this.HACK_SCRIPT_RAM)
-        const weakenHackAllocations = await controller
-          .allocate(weakenHackThreads, this.WEAKEN_SCRIPT_RAM)
+              await this._deploy(plan, controller, subscriber)
+            },
+            this.priority,
+            this._serverFilter.bind(this),
+          )
           .catch((e) => {
-            releaseAllocations(hackAllocations)
-
-            throw e
+            subscriber.error(e)
           })
-        const growAllocation = await controller.allocateOne(growThreads, this.GROW_SCRIPT_RAM).catch((e) => {
-          releaseAllocations([...hackAllocations, ...weakenHackAllocations])
-
-          throw e
-        })
-        const weakenGrowAllocations = await controller
-          .allocate(weakenGrowThreads, this.WEAKEN_SCRIPT_RAM)
-          .catch((e) => {
-            releaseAllocations([...hackAllocations, ...weakenHackAllocations, growAllocation])
-
-            throw e
-          })
-
-        pDeploy = this._deploy(plan, [hackAllocations, weakenHackAllocations, [growAllocation], weakenGrowAllocations])
-      },
-      this.priority,
-      this._serverFilter.bind(this),
+      }),
     )
-
-    await pDeploy
   }
 
   /**
    * This will run as many threads as possible for the batch, even if not all threads can be allocated.
    */
   async tryRun() {
-    let pDeploy: Promise<void>
-
-    await this.threadManager.advancedAllocate(
+    return this.threadManager.advancedAllocate(
       async (controller) => {
         const plan = this.threadPlanner.planPrep(this.target)
-        const { hackThreads, weakenHackThreads, growThreads, weakenGrowThreads } = plan
 
-        const hackAllocations = await controller.tryAllocate(hackThreads, this.HACK_SCRIPT_RAM)
-        const weakenHackAllocations = await controller.tryAllocate(weakenHackThreads, this.WEAKEN_SCRIPT_RAM)
-        const growAllocations = await controller.tryAllocate(growThreads, this.GROW_SCRIPT_RAM)
-        const weakenGrowAllocations = await controller.tryAllocate(weakenGrowThreads, this.WEAKEN_SCRIPT_RAM)
-
-        pDeploy = this._deploy(plan, [hackAllocations, weakenHackAllocations, growAllocations, weakenGrowAllocations])
+        await this._tryDeploy(plan, controller)
       },
       this.priority,
       this._serverFilter.bind(this),
     )
-
-    await pDeploy
   }
 
-  private async _deploy(
-    plan: Plan,
-    [hackAllocations, weakenHackAllocations, growAllocations, weakenGrowAllocations]: AllocationItem[][],
-  ) {
-    const { hackDelay, growDelay, weakenGrowDelay, weakenHackDelay } = plan
+  private _setupDeploy(plan: Plan, subscriber?: Subscriber<void>) {
+    const { weakenGrowDelay, totalThreads } = plan
 
-    /** Will be true once we release the batch,
-     * either due to an error or because all workers are ready and we've emitted the release event */
-    let released = false
-    const workersReady: string[] = []
-    const total =
-      hackAllocations.length + weakenHackAllocations.length + growAllocations.length + weakenGrowAllocations.length
+    let readyThreads: number = 0
 
     const subject: ParentChannelSubject = new Subject()
 
@@ -143,137 +114,235 @@ export class Batch extends EventEmitter<EventMap> {
     // and the workers never become ready or an error is never emitted
     const timeout = setTimeout(
       () => {
-        console.error('ERROR Batch timed out, aborting...', {
-          abortController,
-          workersReady,
-          total,
-          hackAllocations,
-          weakenHackAllocations,
-          growAllocations,
-          weakenGrowAllocations,
-          missingAllocations: [
-            ...hackAllocations,
-            ...weakenHackAllocations,
-            ...growAllocations,
-            ...weakenGrowAllocations,
-          ].filter((a) => !workersReady.includes(a.id)),
-        })
+        this.ns.print('ERROR Batch timed out, aborting...')
         abortController.abort()
       },
       this.ns.getWeakenTime(this.target) + weakenGrowDelay + 1000 * 100,
     )
 
-    subject.pipe(readyEventFilter).subscribe(({ id: worker }) => {
-      workersReady.push(worker)
+    subject.pipe(readyEventFilter).subscribe(({ threads }) => {
+      readyThreads += threads
 
-      if (workersReady.length === total) {
+      if (readyThreads === totalThreads) {
         subject.next({
           type: 'startTime',
           startTime: Date.now() + 100,
         })
-        this.emit('release')
-        released = true
+
+        subscriber?.next()
+        subscriber?.complete()
       }
     })
 
-    subject.pipe(errorEventFilter).subscribe(({ error, id }) => {
-      console.error(`ERROR Worker ${id} emitted error:`, {
-        error,
-        allocation: [...hackAllocations, ...weakenHackAllocations, ...growAllocations, ...weakenGrowAllocations].find(
-          (a) => a.id === id,
-        ),
-      })
+    subject.pipe(errorEventFilter).subscribe(({ error }) => {
       this.ns.print(`ERROR Worker error: ${error}`)
 
       // This will allow the runner to continue if something happens
-      this.emit('release')
+      subscriber?.next()
+      subscriber?.complete()
 
-      if (!abortController.signal.aborted) {
-        abortController.abort()
-      }
+      abortController.abort()
     })
 
-    await Promise.all([
-      this._deployHack(hackDelay, hackAllocations, subject, abortController),
-      this._deployWeaken(weakenHackDelay, weakenHackAllocations, subject, abortController),
-      this._deployGrow(growDelay, growAllocations, subject, abortController),
-      this._deployWeaken(weakenGrowDelay, weakenGrowAllocations, subject, abortController),
-    ]).finally(() => {
+    return {
+      subject,
+      abortController,
+      timeout,
+    }
+  }
+
+  private async _deploy(plan: Plan, controller: AdvandedAllocationController, subscriber?: Subscriber<void>) {
+    const {
+      hackThreads,
+      hackDelay,
+      growThreads,
+      growDelay,
+      weakenGrowThreads,
+      weakenGrowDelay,
+      weakenHackThreads,
+      weakenHackDelay,
+    } = plan
+
+    const { subject, abortController, timeout } = this._setupDeploy(plan, subscriber)
+
+    try {
+      const processes = await Promise.all([
+        controller.allocate(
+          hackThreads,
+          this.HACK_SCRIPT_RAM,
+          this._deployHack.bind(this, hackDelay, subject, abortController),
+        ),
+        controller.allocate(
+          weakenHackThreads,
+          this.WEAKEN_SCRIPT_RAM,
+          this._deployWeaken.bind(this, weakenHackDelay, subject, abortController),
+        ),
+        controller.allocateOne(
+          growThreads,
+          this.GROW_SCRIPT_RAM,
+          this._deployGrow.bind(this, growDelay, subject, abortController),
+        ),
+        controller.allocate(
+          weakenGrowThreads,
+          this.WEAKEN_SCRIPT_RAM,
+          this._deployWeaken.bind(this, weakenGrowDelay, subject, abortController),
+        ),
+      ])
+
+      await Promise.all(processes.flat().map((process) => process()))
+    } catch (e) {
+      abortController.abort()
+
+      throw e
+    } finally {
       clearTimeout(timeout)
       subject.complete()
 
-      if (!released) {
-        this.emit('release')
+      if (!subscriber?.closed) {
+        subscriber?.next()
+        subscriber?.complete()
       }
-    })
+    }
+  }
+
+  private async _tryDeploy(plan: Plan, controller: AdvandedAllocationController) {
+    const {
+      hackThreads,
+      hackDelay,
+      growThreads,
+      growDelay,
+      weakenGrowThreads,
+      weakenGrowDelay,
+      weakenHackThreads,
+      weakenHackDelay,
+    } = plan
+
+    const { subject, abortController, timeout } = this._setupDeploy(plan)
+
+    try {
+      const processes = await Promise.all([
+        controller.tryAllocate(
+          hackThreads,
+          this.HACK_SCRIPT_RAM,
+          this._deployHack.bind(this, hackDelay, subject, abortController),
+        ),
+        controller.tryAllocate(
+          weakenHackThreads,
+          this.WEAKEN_SCRIPT_RAM,
+          this._deployWeaken.bind(this, weakenHackDelay, subject, abortController),
+        ),
+        controller.tryAllocate(
+          growThreads,
+          this.GROW_SCRIPT_RAM,
+          this._deployGrow.bind(this, growDelay, subject, abortController),
+        ),
+        controller.tryAllocate(
+          weakenGrowThreads,
+          this.WEAKEN_SCRIPT_RAM,
+          this._deployWeaken.bind(this, weakenGrowDelay, subject, abortController),
+        ),
+      ])
+
+      await Promise.all(
+        processes
+          .map(([, processes]) => processes)
+          .flat()
+          .map((process) => process()),
+      )
+    } catch (e) {
+      abortController.abort()
+
+      throw e
+    } finally {
+      clearTimeout(timeout)
+      subject.complete()
+    }
   }
 
   private _makeDeploy(script: string) {
-    return (
+    return async (
       delay: number,
-      allocations: AllocationItem[],
       subject: ParentChannelSubject,
       abortController: AbortController,
+      allocation: AllocationItem,
     ) => {
-      return Promise.all(
-        allocations.map(async (allocation) => {
-          try {
-            if (abortController.signal.aborted) return
+      try {
+        if (abortController.signal.aborted) return
 
-            this.nuker.nuke(allocation.host)
+        this.nuker.nuke(allocation.host)
 
-            this.ns.scp(script, allocation.host)
+        this.ns.scp(script, allocation.host)
 
-            const [channel, parent, child] = createParentChannel(this.ns, subject, delay, allocation.id)
+        const [channel, parent, child] = createParentChannel(this.ns, subject, delay)
 
-            abortController.signal.addEventListener('abort', () => {
-              channel.close()
+        // Shut down the channel if the batch is aborted
+        abortController.signal.addEventListener('abort', () => {
+          channel.close()
+        })
+
+        const listenPromise = channel.listen()
+
+        const args = [
+          ['--target', this.target],
+          ['--from', child],
+          ['--to', parent],
+        ].flat()
+
+        const pid = this.ns.exec(
+          script,
+          allocation.host,
+          {
+            threads: allocation.threads,
+            temporary: true,
+            // To account for zod
+            ramOverride: this.ns.getScriptRam(script) - 1,
+          },
+          ...args,
+        )
+
+        if (pid === 0) {
+          this.ns.print(
+            `ERROR Failed to start script ${script} on host ${allocation.host} with ${allocation.threads} threads and args "${args.join(' ')}"`,
+            {
+              maxRam: this.ns.getServerMaxRam(allocation.host),
+              usedRam: this.ns.getServerUsedRam(allocation.host),
+            },
+          )
+
+          throw new FailedToStartScriptError()
+        }
+
+        const pingId = crypto.randomUUID()
+        const ping = setInterval(() => {
+          channel.send('ping', pingId)
+        }, 100)
+
+        subject
+          .pipe(
+            pongEventFilter,
+            filter(({ id }) => id === pingId),
+          )
+          .subscribe(() => {
+            clearInterval(ping)
+
+            subject.next({
+              type: 'ready',
+              threads: allocation.threads,
             })
+          })
 
-            const listenPromise = channel.listen()
+        abortController.signal.addEventListener('abort', () => {
+          clearInterval(ping)
+          this.ns.kill(pid)
+        })
 
-            const args = [
-              ['--target', this.target],
-              ['--from', child],
-              ['--to', parent],
-            ].flat()
-
-            const pid = this.ns.exec(
-              script,
-              allocation.host,
-              {
-                threads: allocation.threads,
-                temporary: true,
-                // To account for zod
-                ramOverride: this.ns.getScriptRam(script) - 1,
-              },
-              ...args,
-            )
-
-            if (pid === 0) {
-              this.ns.print(
-                `ERROR Failed to start script ${script} on host ${allocation.host} with args ${args.join(' ')}`,
-              )
-
-              throw E_FAILED_TO_START_SCRIPT
-            }
-
-            abortController.signal.addEventListener('abort', () => {
-              this.ns.kill(pid)
-            })
-
-            return listenPromise
-          } catch (error) {
-            abortController.abort()
-
-            if (error !== E_FAILED_TO_START_SCRIPT) {
-              throw error
-            }
-          } finally {
+        return () =>
+          listenPromise.finally(() => {
             allocation.release()
-          }
-        }),
-      )
+          })
+      } finally {
+        allocation.release()
+      }
     }
   }
 
@@ -286,10 +355,8 @@ export class Batch extends EventEmitter<EventMap> {
   }
 }
 
-const E_FAILED_TO_START_SCRIPT = new Error('Failed to start script')
-
-function releaseAllocations(allocations: AllocationItem[]) {
-  for (const allocation of allocations) {
-    allocation.release()
+export class FailedToStartScriptError extends UnallocatableServerError {
+  constructor() {
+    super('Failed to start script')
   }
 }

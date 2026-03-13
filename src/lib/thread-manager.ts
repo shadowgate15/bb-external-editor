@@ -3,14 +3,11 @@ import 'reflect-metadata'
 import { provide } from '@inversifyjs/binding-decorators'
 import { Semaphore } from 'async-mutex'
 import { inject, injectable } from 'inversify'
+import { debounceTime, firstValueFrom, Subject } from 'rxjs'
 
 import { NSIdentifier } from './ns.identifier'
 import { RamChecker } from './utils/ram-checker'
 import { ServerList } from './utils/server-list'
-
-export interface EventMap {
-  released: []
-}
 
 export interface AllocationItem {
   id: string
@@ -30,6 +27,8 @@ export class ThreadManager {
   private readonly _lock = new Semaphore(1)
 
   private readonly _allocatableServers = new Map<string, AllocatableServer>()
+
+  private readonly threadsReleased = new Subject<void>()
 
   constructor(
     @inject(NSIdentifier)
@@ -95,68 +94,95 @@ export class ThreadManager {
   ) {
     await this._lock.runExclusive(
       async () => {
-        const tryAllocate = async (threads: number, scriptRam: number) => {
+        const tryAllocate: AdvandedAllocationController['tryAllocate'] = async (threads, scriptRam, createProcess) => {
           let neededThreads = threads
-          const allocations: AllocationItem[] = []
+          const createProcessPromises: Array<() => Promise<void>> = []
 
           for (const allocatableServer of this.filteredAllocatableServers(filter)) {
             // Escape early if we have allocated all needed threads
             if (neededThreads <= 0) break
 
-            const [allocatedThreads, release] = allocatableServer.tryAllocateThreads(threads, scriptRam)
+            const allocatedThreads = allocatableServer.tryAllocateThreads(neededThreads, scriptRam)
 
             if (allocatedThreads > 0) {
-              allocations.push({
-                id: crypto.randomUUID(),
-                host: allocatableServer.name,
-                threads: allocatedThreads,
-                release,
-              })
+              try {
+                createProcessPromises.push(
+                  await createProcess({
+                    id: crypto.randomUUID(),
+                    host: allocatableServer.name,
+                    threads: allocatedThreads,
+                    release: this._makeRelease(),
+                  }),
+                )
 
-              neededThreads -= allocatedThreads
+                neededThreads -= allocatedThreads
+              } catch (e) {
+                if (!(e instanceof UnallocatableServerError)) throw e
+              }
             }
           }
 
-          return allocations
+          return [neededThreads, createProcessPromises] as const
         }
 
         await fn({
           tryAllocate,
-          allocate: async (threads, scriptRam) => {
-            const attemptedAllocations = await tryAllocate(threads, scriptRam)
-            const totalAllocatedThreads = attemptedAllocations.reduce((sum, a) => sum + a.threads, 0)
+          allocate: async (threads, scriptRam, createProcess) => {
+            const [unallocated, createProcessPromises] = await tryAllocate(threads, scriptRam, createProcess)
 
-            if (totalAllocatedThreads < threads) {
-              for (const allocation of attemptedAllocations) {
-                allocation.release()
-              }
-
-              throw E_NOT_ENOUGH_RAM
+            if (unallocated !== 0) {
+              throw new NotEnoughRAMError()
             }
 
-            return attemptedAllocations
+            return createProcessPromises
           },
-          allocateOne: async (threads, scriptRam): Promise<AllocationItem> => {
+          allocateOne: async (threads, scriptRam, createProcess) => {
             for (const allocatableServer of this.filteredAllocatableServers(filter)) {
               try {
-                const [allocatedThreads, release] = allocatableServer.allocateThreads(threads, scriptRam)
+                const allocatedThreads = allocatableServer.allocateThreads(threads, scriptRam)
 
-                return {
+                return await createProcess({
                   id: crypto.randomUUID(),
                   host: allocatableServer.name,
                   threads: allocatedThreads,
-                  release,
-                }
+                  release: this._makeRelease(),
+                })
               } catch (e) {
-                if (e !== E_NOT_ENOUGH_RAM) throw e
+                if (!(e instanceof UnallocatableServerError)) throw e
               }
             }
+
+            throw new NotEnoughRAMError()
           },
         })
       },
       1,
       priority,
     )
+  }
+
+  private _makeRelease() {
+    let released = false
+    return () => {
+      if (released) return
+
+      released = true
+      this.threadsReleased.next()
+    }
+  }
+
+  async waitForThreadsToBeReleased() {
+    return firstValueFrom(
+      this.threadsReleased.pipe(
+        // Adding a debounce here to prevent waiting for multiple thread releases if they happen in quick succession,
+        // which is common when a batch finishes and releases a lot of threads at once
+        debounceTime(500),
+      ),
+    )
+  }
+
+  getAllocatableServer(host: string) {
+    return this._allocatableServers.get(host)
   }
 }
 
@@ -169,28 +195,46 @@ export interface AllocationItem {
   release: () => void
 }
 
+export type CreateProcessFunction = (allocation: AllocationItem) => Promise<
+  // The returned promise is expected to resolve when the process that was created with the allocated threads finishes,
+  // so that the ThreadManager can keep track of when threads are released and potentially unblock waiting code that is waiting for threads to be released
+  () => Promise<void>
+>
+
 export interface AdvandedAllocationController {
   /**
    * Allocates the requested number of threads on a single server.
    * If there is not enough RAM available on any single server, it will throw an error.
    */
-  allocateOne(threads: number, scriptRam: number): Promise<AllocationItem>
+  allocateOne(
+    threads: number,
+    scriptRam: number,
+    createProcess: CreateProcessFunction,
+  ): Promise<Awaited<ReturnType<CreateProcessFunction>>>
 
   /**
    * Allocates the requested number of threads on multiple servers.
    * If there is not enough RAM available on any single server, it will throw an error.
    */
-  allocate(threads: number, scriptRam: number): Promise<AllocationItem[]>
+  allocate(
+    threads: number,
+    scriptRam: number,
+    createProcess: CreateProcessFunction,
+  ): Promise<Array<Awaited<ReturnType<CreateProcessFunction>>>>
 
   /**
    * Allocates as many threads as possible on multiple servers up to the requested number of threads.
+   *
+   * @returns Number of unallocated threads
    */
-  tryAllocate(threads: number, scriptRam: number): Promise<AllocationItem[]>
+  tryAllocate(
+    threads: number,
+    scriptRam: number,
+    createProcess: CreateProcessFunction,
+  ): Promise<[unallocated: number, createProcessPromises: Array<Awaited<ReturnType<CreateProcessFunction>>>]>
 }
 
 export class AllocatableServer {
-  private _allocatedRam = 0
-
   constructor(
     private readonly ns: NS,
     private readonly ramChecker: RamChecker,
@@ -203,48 +247,42 @@ export class AllocatableServer {
    * The returned release function must be called when the threads are no longer needed to free up the allocated RAM.
    * This will either allocate the requested number of threads or throw an error if there is not enough RAM available.
    */
-  allocateThreads(threads: number, scriptRam: number): [allocatedThreads: number, release: () => void] {
-    const [threadsToAllocate, release] = this.tryAllocateThreads(threads, scriptRam)
+  allocateThreads(threads: number, scriptRam: number): number {
+    const threadsToAllocate = this.tryAllocateThreads(threads, scriptRam)
 
     if (threadsToAllocate === 0) {
-      release()
-
-      throw E_NOT_ENOUGH_RAM
+      throw new NotEnoughRAMError()
     }
 
-    return [threadsToAllocate, release]
+    return threadsToAllocate
   }
 
   /**
    * Tries to allocate threads on this server. If there is not enough RAM available, it will allocate as many threads as possible.
    * The returned release function must be called when the threads are no longer needed to free up the allocated RAM.
    */
-  tryAllocateThreads(threads: number, scriptRam: number): [allocatedThreads: number, release: () => void] {
+  tryAllocateThreads(threads: number, scriptRam: number): number {
     const maxPossibleThreads = Math.floor(this._getAvailableRam() / scriptRam)
     const threadsToAllocate = Math.min(threads, maxPossibleThreads)
-    const ramToAllocate = threadsToAllocate * scriptRam
 
     if (maxPossibleThreads < threads) {
+      const ramToAllocate = threadsToAllocate * scriptRam
+
       console.log('Found a server that cannot allocate the requested number of threads, skipping it', {
         name: this.name,
         maxRam: this.ramChecker.getMaxRam(this.name),
-        allocatedRam: this._allocatedRam,
+        usedRam: this.ramChecker.getUsedRam(this.name),
         neededRam: threads * scriptRam,
+        ramToAllocate,
+        maxPossibleThreads,
       })
     }
 
-    this._allocatedRam += ramToAllocate
-
-    return [
-      threadsToAllocate,
-      () => {
-        this._allocatedRam -= ramToAllocate
-      },
-    ]
+    return threadsToAllocate
   }
 
   private _getAvailableRam() {
-    let available = this.ramChecker.getMaxRam(this.name) - this._allocatedRam
+    let available = this.ramChecker.getAvailableRam(this.name)
 
     if (this.name === 'home') {
       available -= Number(this.ns.read('home-reserved-ram.txt')) || 0
@@ -254,4 +292,10 @@ export class AllocatableServer {
   }
 }
 
-export const E_NOT_ENOUGH_RAM = new Error('Not enough RAM available to allocate threads')
+export class UnallocatableServerError extends Error {}
+
+export class NotEnoughRAMError extends UnallocatableServerError {
+  constructor() {
+    super('Not enough RAM available to allocate threads')
+  }
+}

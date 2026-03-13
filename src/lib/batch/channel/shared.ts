@@ -5,11 +5,10 @@ export type ParentChannelMethods = {
   /** Sent when the worker is complete */
   complete: () => Promise<void>
 
-  /** Sent when the worker is ready */
-  ready: () => Promise<void>
-
   /** Error sent from the worker */
   error: (error: unknown) => Promise<void>
+
+  pong: (id: string) => Promise<void>
 }
 
 /**
@@ -17,4 +16,5 @@ export type ParentChannelMethods = {
  */
 export type ChildChannelMethods = {
   startTime: (startTime: number) => Promise<void>
+  ping: (id: string) => Promise<void>
 }

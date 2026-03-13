@@ -16,11 +16,13 @@ export abstract class ChildChannel extends NSChannel<ChildChannelMethods, Parent
     }, crypto.randomUUID())
 
     this.server.addMethod('startTime', async (startTime) => {
-      ns.print(`INFO Worker ${this.to} starting at time ${new Date(startTime).toLocaleString()}`)
+      ns.print(
+        `INFO [${new Date().toLocaleString()}] Worker ${this.to} starting at time ${new Date(startTime).toLocaleString()}`,
+      )
 
       await this.process(startTime)
         .then(() => {
-          ns.print(`SUCCESS Worker ${this.to} complete`)
+          ns.print(`SUCCESS [${new Date().toLocaleString()}] Worker ${this.to} complete`)
         })
         .catch((error) => {
           this.send('error', error)
@@ -29,11 +31,15 @@ export abstract class ChildChannel extends NSChannel<ChildChannelMethods, Parent
           this.close()
         })
     })
+
+    this.server.addMethod('ping', async (id) => {
+      ns.print(`INFO [${new Date().toLocaleString()}] Worker ${this.to} received ping with id ${id}`)
+      this.send('pong', id)
+    })
   }
 
   override async preListen() {
-    this.ns.print(`INFO Worker ${this.to} is ready`)
-    this.send('ready')
+    this.ns.print(`INFO [${new Date().toLocaleString()}] Worker ${this.to} is ready`)
   }
 
   protected calculateDelay(startTime: number) {
