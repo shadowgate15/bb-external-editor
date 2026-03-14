@@ -1,20 +1,28 @@
+import 'reflect-metadata'
+
+import { provide } from '@inversifyjs/binding-decorators'
+import { inject, injectable } from 'inversify'
 import { filter, lastValueFrom, Observable, Subject, Subscriber } from 'rxjs'
+
+import { NSIdentifier } from '@/lib/ns.identifier'
 
 import {
   AdvandedAllocationController,
   AllocationItem,
   ThreadManager,
   UnallocatableServerError,
-} from '../thread-manager'
-import { Nuker } from '../utils/nuker'
-import { ScriptAbortController } from '../utils/script-abort-controller'
+} from '../../thread-manager'
+import { Nuker } from '../../utils/nuker'
+import { ScriptAbortController } from '../../utils/script-abort-controller'
 import {
   createParentChannel,
   errorEventFilter,
   ParentChannelSubject,
   pongEventFilter,
   readyEventFilter,
-} from './channel/parent'
+} from '../channel/parent'
+import { PriorityProvider } from '../runner/priority-provider'
+import { TargetProvider } from '../runner/target-provider'
 import { Plan, ThreadPlanner } from './planner'
 
 export interface EventMap {
@@ -24,6 +32,8 @@ export interface EventMap {
 /**
  * This class is responsible for coordinating the four scripts in a batch
  */
+@injectable('Singleton')
+@provide()
 export class Batch {
   private readonly HACK_SCRIPT = 'share/batch/hack.js'
   private readonly GROW_SCRIPT = 'share/batch/grow.js'
@@ -35,20 +45,27 @@ export class Batch {
   private readonly WEAKEN_SCRIPT_RAM = this.ns.getScriptRam(this.WEAKEN_SCRIPT) - 1
 
   constructor(
+    @inject(NSIdentifier)
     private readonly ns: NS,
 
+    @inject(ThreadPlanner)
     private readonly threadPlanner: ThreadPlanner,
 
+    @inject(ThreadManager)
     private readonly threadManager: ThreadManager,
 
+    @inject(Nuker)
     private readonly nuker: Nuker,
 
+    @inject(ScriptAbortController)
     private readonly scriptAbortController: ScriptAbortController,
 
     /** The host to target for the batch */
+    @inject(TargetProvider)
     private readonly target: string,
 
     /** Priority of the batch, higher priority batches will be executed first when there are multiple batches waiting to run */
+    @inject(PriorityProvider)
     private readonly priority: number = 0,
   ) {}
 
@@ -122,6 +139,9 @@ export class Batch {
 
     subject.pipe(readyEventFilter).subscribe(({ threads }) => {
       readyThreads += threads
+      this.ns.print(
+        `INFO Received ready event for ${threads} threads, total ready threads: ${readyThreads}/${totalThreads}`,
+      )
 
       if (readyThreads === totalThreads) {
         subject.next({
@@ -165,29 +185,31 @@ export class Batch {
 
     const { subject, abortController, timeout } = this._setupDeploy(plan, subscriber)
 
+    console.log('Starting batch with the following plan:', plan)
+
     try {
-      const processes = await Promise.all([
-        controller.allocate(
+      const processes = [
+        await controller.allocate(
           hackThreads,
           this.HACK_SCRIPT_RAM,
           this._deployHack.bind(this, hackDelay, subject, abortController),
         ),
-        controller.allocate(
+        await controller.allocate(
           weakenHackThreads,
           this.WEAKEN_SCRIPT_RAM,
           this._deployWeaken.bind(this, weakenHackDelay, subject, abortController),
         ),
-        controller.allocateOne(
+        await controller.allocateOne(
           growThreads,
           this.GROW_SCRIPT_RAM,
           this._deployGrow.bind(this, growDelay, subject, abortController),
         ),
-        controller.allocate(
+        await controller.allocate(
           weakenGrowThreads,
           this.WEAKEN_SCRIPT_RAM,
           this._deployWeaken.bind(this, weakenGrowDelay, subject, abortController),
         ),
-      ])
+      ]
 
       await Promise.all(processes.flat().map((process) => process()))
     } catch (e) {

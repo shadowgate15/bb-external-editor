@@ -1,19 +1,42 @@
-import { ThreadManager } from '../thread-manager'
-import { ScriptAbortController } from '../utils/script-abort-controller'
-import { BatchFactory } from './batch.factory'
-import { PreperationLock } from './preperation-lock'
+import 'reflect-metadata'
 
+import { provide } from '@inversifyjs/binding-decorators'
+import { inject, injectable } from 'inversify'
+
+import { NSIdentifier } from '@/lib/ns.identifier'
+
+import { ThreadManager } from '../../thread-manager'
+import { ScriptAbortController } from '../../utils/script-abort-controller'
+import { BatchFactory, type IBatchFactory } from '../batch'
+import { PreperationLock } from './preperation-lock'
+import { PriorityProvider } from './priority-provider'
+import { TargetProvider } from './target-provider'
+
+@injectable('Singleton')
+@provide()
 export class BatchRunner {
   private readonly abortController = new AbortController()
 
   constructor(
+    @inject(NSIdentifier)
     private readonly ns: NS,
-    private readonly batchFactory: BatchFactory,
+
+    @inject(BatchFactory)
+    private readonly batchFactory: IBatchFactory,
+
+    @inject(PreperationLock)
     private readonly preperationLock: PreperationLock,
+
+    @inject(ScriptAbortController)
     private readonly scriptAbortController: ScriptAbortController,
+
+    @inject(ThreadManager)
     private readonly threadManager: ThreadManager,
 
+    @inject(TargetProvider)
     private readonly target: string,
+
+    @inject(PriorityProvider)
     private readonly priority: number,
   ) {
     this.scriptAbortController.childController(this.abortController)
@@ -42,7 +65,7 @@ export class BatchRunner {
             try {
               if (this.abortController.signal.aborted) return
 
-              const batch = this.batchFactory.create(this.target, preparationPriority)
+              const batch = await this.batchFactory(preparationPriority)
 
               await batch.tryRun()
               await this.ns.asleep(50)
@@ -65,7 +88,7 @@ export class BatchRunner {
       try {
         if (this.abortController.signal.aborted) return
 
-        const batch = this.batchFactory.create(this.target, this.priority)
+        const batch = await this.batchFactory()
 
         await batch.run()
 

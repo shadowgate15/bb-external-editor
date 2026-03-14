@@ -3,10 +3,8 @@ import 'reflect-metadata'
 import { provide } from '@inversifyjs/binding-decorators'
 import { injectable } from 'inversify'
 
-@injectable()
-@provide(undefined, (bind) => {
-  bind.inSingletonScope()
-})
+@injectable('Singleton')
+@provide()
 export class ScriptAbortController extends AbortController {
   /**
    * This will create a child AbortController that will be aborted when the parent is aborted.

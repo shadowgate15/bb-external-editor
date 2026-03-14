@@ -1,24 +1,17 @@
 import 'reflect-metadata'
 
-import { EventEmitter } from 'node:events'
-
 import { provide } from '@inversifyjs/binding-decorators'
 import { inject, injectable } from 'inversify'
+import { lastValueFrom, Subject } from 'rxjs'
 
 import { NSIdentifier } from '../ns.identifier'
 import { ServerList } from '../utils/server-list'
-import { BatchRunner } from './runner'
-import { BatchRunnerFactory } from './runner.factory'
+import { type BatchRunnerFactory, RunnerFactory } from './runner'
+import { BatchRunner } from './runner/runner'
 
-@injectable()
-@provide(undefined, (bind) => {
-  bind.inSingletonScope()
-})
-export class BatchManager extends EventEmitter<{
-  finished: []
-}> {
-  private readonly batchRunners = new Map<string, BatchRunner>()
-
+@injectable('Singleton')
+@provide()
+export class BatchManager extends Subject<void> {
   private batchRunner: BatchRunner | null = null
 
   private score: number = 0
@@ -30,7 +23,7 @@ export class BatchManager extends EventEmitter<{
     @inject(ServerList)
     private readonly serverList: ServerList,
 
-    @inject(BatchRunnerFactory)
+    @inject(RunnerFactory)
     private readonly batchRunnerFactory: BatchRunnerFactory,
   ) {
     super()
@@ -48,7 +41,11 @@ export class BatchManager extends EventEmitter<{
     this.setupBatches()
   }
 
-  private setupBatches() {
+  start(): Promise<void> {
+    return lastValueFrom(this)
+  }
+
+  private async setupBatches() {
     const servers = this.serverList
       .getAll()
       .filter((server) => this.validHackingLevel(server) && this.ns.hasRootAccess(server))
@@ -68,7 +65,7 @@ export class BatchManager extends EventEmitter<{
       // Kill current batch runner if it exists
       this.batchRunner?.stop()
 
-      this.batchRunner = this.batchRunnerFactory.create(server, score)
+      this.batchRunner = await this.batchRunnerFactory(server, score)
       this.batchRunner.start()
     }
   }

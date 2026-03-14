@@ -4,12 +4,10 @@ import { provide } from '@inversifyjs/binding-decorators'
 import { Semaphore } from 'async-mutex'
 import { inject, injectable } from 'inversify'
 
-import { NSIdentifier } from '../ns.identifier'
+import { NSIdentifier } from '../../ns.identifier'
 
-@injectable()
-@provide(undefined, (bind) => {
-  bind.inSingletonScope()
-})
+@injectable('Singleton')
+@provide()
 export class PreperationLock extends Semaphore {
   constructor(
     @inject(NSIdentifier)
