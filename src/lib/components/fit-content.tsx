@@ -13,7 +13,6 @@ export function FitContent({ children }: React.PropsWithChildren<object>) {
   )
 
   const { ref } = useResizeDetector<HTMLDivElement>({
-    disableRerender: true,
     onResize: resizeCallback,
   })
 

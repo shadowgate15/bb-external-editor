@@ -41,6 +41,9 @@ const createContext = async () =>
         port: 12525,
         types: 'NetscriptDefinitions.d.ts',
         remoteDebugging: true,
+        mirror: {
+          mirror: ['home'],
+        },
         distribute: {},
       }),
     ],
