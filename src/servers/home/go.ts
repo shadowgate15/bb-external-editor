@@ -19,6 +19,12 @@ export async function main(ns: NS) {
   const getBestOpponent = () => {
     const opponents = ALL_OPPONENTS.map((opponent) => ({ opponent, stats: ns.go.analysis.getStats()[opponent] }))
 
+    const opponentWithWinStreak = opponents.find(({ stats }) => stats.winStreak > 0)
+
+    if (opponentWithWinStreak) {
+      return opponentWithWinStreak.opponent
+    }
+
     let bestOpponent = opponents[0]
 
     for (const { opponent, stats } of opponents) {
