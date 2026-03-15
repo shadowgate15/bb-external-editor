@@ -5,6 +5,8 @@ import { inject, injectable } from 'inversify'
 import { filter, lastValueFrom, Observable, Subject, Subscriber } from 'rxjs'
 
 import { NSIdentifier } from '@/lib/ns.identifier'
+import { PortNumberBuilder } from '@/lib/port-number'
+import { BasePortNumberBuilder } from '@/lib/port-number/base'
 
 import {
   AdvandedAllocationController,
@@ -29,20 +31,20 @@ export interface EventMap {
   release: []
 }
 
+const HACK_SCRIPT = 'share/batch/hack.js'
+const GROW_SCRIPT = 'share/batch/grow.js'
+const WEAKEN_SCRIPT = 'share/batch/weaken.js'
+
 /**
  * This class is responsible for coordinating the four scripts in a batch
  */
 @injectable('Singleton')
 @provide()
 export class Batch {
-  private readonly HACK_SCRIPT = 'share/batch/hack.js'
-  private readonly GROW_SCRIPT = 'share/batch/grow.js'
-  private readonly WEAKEN_SCRIPT = 'share/batch/weaken.js'
-
   // Subtracting 1 from the RAM usage of each script to account for zod.run being counted in the calculation
-  private readonly HACK_SCRIPT_RAM = this.ns.getScriptRam(this.HACK_SCRIPT) - 1
-  private readonly GROW_SCRIPT_RAM = this.ns.getScriptRam(this.GROW_SCRIPT) - 1
-  private readonly WEAKEN_SCRIPT_RAM = this.ns.getScriptRam(this.WEAKEN_SCRIPT) - 1
+  private readonly HACK_SCRIPT_RAM = this.ns.getScriptRam(HACK_SCRIPT) - 1
+  private readonly GROW_SCRIPT_RAM = this.ns.getScriptRam(GROW_SCRIPT) - 1
+  private readonly WEAKEN_SCRIPT_RAM = this.ns.getScriptRam(WEAKEN_SCRIPT) - 1
 
   constructor(
     @inject(NSIdentifier)
@@ -306,7 +308,8 @@ export class Batch {
 
         this.ns.scp(script, allocation.host)
 
-        const [channel, parent, child] = createParentChannel(this.ns, subject, delay)
+        const [parent, child] = this._getPorts(script)
+        const channel = createParentChannel(this.ns, subject, delay, parent, child)
 
         // Shut down the channel if the batch is aborted
         abortController.signal.addEventListener('abort', () => {
@@ -379,12 +382,37 @@ export class Batch {
     }
   }
 
-  private _deployHack = this._makeDeploy(this.HACK_SCRIPT)
-  private _deployGrow = this._makeDeploy(this.GROW_SCRIPT)
-  private _deployWeaken = this._makeDeploy(this.WEAKEN_SCRIPT)
+  private _deployHack = this._makeDeploy(HACK_SCRIPT)
+  private _deployGrow = this._makeDeploy(GROW_SCRIPT)
+  private _deployWeaken = this._makeDeploy(WEAKEN_SCRIPT)
 
   private _serverFilter(server: string) {
     return this.ns.hasRootAccess(server)
+  }
+
+  private _getPorts(script: string) {
+    const batchBuilder = PortNumberBuilder.fromServer(this.ns, this.target).batch()
+    let childBuilder: BasePortNumberBuilder
+
+    switch (script) {
+      case HACK_SCRIPT: {
+        childBuilder = batchBuilder.hack()
+        break
+      }
+      case WEAKEN_SCRIPT: {
+        childBuilder = batchBuilder.weaken()
+        break
+      }
+      case GROW_SCRIPT: {
+        childBuilder = batchBuilder.grow()
+        break
+      }
+    }
+
+    return [
+      PortNumberBuilder.fromServer(this.ns, this.ns.getHostname()).batch().parent().fillRandom(),
+      childBuilder.fillRandom(),
+    ]
   }
 }
 

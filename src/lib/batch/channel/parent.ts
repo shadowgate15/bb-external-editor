@@ -77,9 +77,8 @@ export function createParentChannel(
   ns: NS,
   subject: ParentChannelSubject,
   delay: number,
-): [channel: ParentChannel, parent: number, child: number] {
-  const parent = randomNumber()
-  const child = randomNumber()
-
-  return [new ParentChannel(ns, parent, child, subject, delay), parent, child]
+  parent: number,
+  child: number,
+): ParentChannel {
+  return new ParentChannel(ns, parent, child, subject, delay)
 }
