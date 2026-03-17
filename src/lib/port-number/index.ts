@@ -1,6 +1,8 @@
 import { BasePortNumberBuilder, PortNumberType } from './base'
 import { BatchTitanPortNumberBuilder, Titan } from './titan'
 
+export { PortProvider } from './provider'
+
 export class PortNumberBuilder extends BasePortNumberBuilder {
   static fromServer(ns: NS, server: string) {
     return new PortNumberBuilder([

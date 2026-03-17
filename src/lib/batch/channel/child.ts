@@ -33,8 +33,8 @@ export abstract class ChildChannel extends NSChannel<ChildChannelMethods, Parent
     })
 
     this.server.addMethod('ping', async (id) => {
-      ns.print(`INFO [${new Date().toLocaleString()}] Worker ${this.to} received ping with id ${id}`)
       this.send('pong', id)
+      ns.print(`INFO [${new Date().toLocaleString()}] Worker ${this.to} received ping with id ${id}`)
     })
   }
 

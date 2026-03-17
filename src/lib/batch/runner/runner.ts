@@ -1,11 +1,10 @@
 import 'reflect-metadata'
 
-import { provide } from '@inversifyjs/binding-decorators'
 import { inject, injectable } from 'inversify'
 
 import { NSIdentifier } from '@/lib/ns.identifier'
 
-import { ThreadManager } from '../../thread-manager'
+import { ThreadManager, UnallocatableServerError } from '../../thread-manager'
 import { ScriptAbortController } from '../../utils/script-abort-controller'
 import { BatchFactory, type IBatchFactory } from '../batch'
 import { PreperationLock } from './preperation-lock'
@@ -13,7 +12,6 @@ import { PriorityProvider } from './priority-provider'
 import { TargetProvider } from './target-provider'
 
 @injectable('Singleton')
-@provide()
 export class BatchRunner {
   private readonly abortController = new AbortController()
 

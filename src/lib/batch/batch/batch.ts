@@ -1,12 +1,10 @@
 import 'reflect-metadata'
 
-import { provide } from '@inversifyjs/binding-decorators'
 import { inject, injectable } from 'inversify'
 import { filter, lastValueFrom, Observable, Subject, Subscriber } from 'rxjs'
 
 import { NSIdentifier } from '@/lib/ns.identifier'
-import { PortNumberBuilder } from '@/lib/port-number'
-import { BasePortNumberBuilder } from '@/lib/port-number/base'
+import { PortProvider } from '@/lib/port-number'
 
 import {
   AdvandedAllocationController,
@@ -25,21 +23,17 @@ import {
 } from '../channel/parent'
 import { PriorityProvider } from '../runner/priority-provider'
 import { TargetProvider } from '../runner/target-provider'
+import { GROW_SCRIPT, HACK_SCRIPT, WEAKEN_SCRIPT } from './constants'
 import { Plan, ThreadPlanner } from './planner'
 
 export interface EventMap {
   release: []
 }
 
-const HACK_SCRIPT = 'share/batch/hack.js'
-const GROW_SCRIPT = 'share/batch/grow.js'
-const WEAKEN_SCRIPT = 'share/batch/weaken.js'
-
 /**
  * This class is responsible for coordinating the four scripts in a batch
  */
 @injectable('Singleton')
-@provide()
 export class Batch {
   // Subtracting 1 from the RAM usage of each script to account for zod.run being counted in the calculation
   private readonly HACK_SCRIPT_RAM = this.ns.getScriptRam(HACK_SCRIPT) - 1
@@ -61,6 +55,9 @@ export class Batch {
 
     @inject(ScriptAbortController)
     private readonly scriptAbortController: ScriptAbortController,
+
+    @inject(PortProvider)
+    private readonly portProvider: PortProvider,
 
     /** The host to target for the batch */
     @inject(TargetProvider)
@@ -92,7 +89,11 @@ export class Batch {
             async (controller) => {
               const plan = this.threadPlanner.plan(this.target)
 
-              await this._deploy(plan, controller, subscriber)
+              // NOTE: We are not awaiting this on purpose,
+              // since the subscriber will be completed when the batch is done in the _deploy method,
+              this._deploy(plan, controller, subscriber).catch((e) => {
+                subscriber.error(e)
+              })
             },
             this.priority,
             this._serverFilter.bind(this),
@@ -120,7 +121,7 @@ export class Batch {
   }
 
   private _setupDeploy(plan: Plan, subscriber?: Subscriber<void>) {
-    const { weakenGrowDelay, totalThreads } = plan
+    const { totalThreads } = plan
 
     let readyThreads: number = 0
 
@@ -131,13 +132,10 @@ export class Batch {
 
     // Timeout to prevent hanging batches in case something goes wrong
     // and the workers never become ready or an error is never emitted
-    const timeout = setTimeout(
-      () => {
-        this.ns.print('ERROR Batch timed out, aborting...')
-        abortController.abort()
-      },
-      this.ns.getWeakenTime(this.target) + weakenGrowDelay + 1000 * 100,
-    )
+    const timeout = setTimeout(() => {
+      this.ns.print('ERROR Batch timed out, aborting...')
+      abortController.abort()
+    }, 5000)
 
     subject.pipe(readyEventFilter).subscribe(({ threads }) => {
       readyThreads += threads
@@ -146,6 +144,7 @@ export class Batch {
       )
 
       if (readyThreads === totalThreads) {
+        clearTimeout(timeout)
         subject.next({
           type: 'startTime',
           startTime: Date.now() + 100,
@@ -308,7 +307,8 @@ export class Batch {
 
         this.ns.scp(script, allocation.host)
 
-        const [parent, child] = this._getPorts(script)
+        const [parent, releaseParent] = this.portProvider.batchParent()
+        const [child, releaseChild] = this.portProvider.batchChild(script, this.target)
         const channel = createParentChannel(this.ns, subject, delay, parent, child)
 
         // Shut down the channel if the batch is aborted
@@ -348,11 +348,6 @@ export class Batch {
           throw new FailedToStartScriptError()
         }
 
-        const pingId = crypto.randomUUID()
-        const ping = setInterval(() => {
-          channel.send('ping', pingId)
-        }, 100)
-
         subject
           .pipe(
             pongEventFilter,
@@ -367,6 +362,11 @@ export class Batch {
             })
           })
 
+        const pingId = crypto.randomUUID()
+        const ping = setInterval(() => {
+          channel.send('ping', pingId)
+        }, 100)
+
         abortController.signal.addEventListener('abort', () => {
           clearInterval(ping)
           this.ns.kill(pid)
@@ -374,6 +374,8 @@ export class Batch {
 
         return () =>
           listenPromise.finally(() => {
+            releaseParent()
+            releaseChild()
             allocation.release()
           })
       } finally {
@@ -388,31 +390,6 @@ export class Batch {
 
   private _serverFilter(server: string) {
     return this.ns.hasRootAccess(server)
-  }
-
-  private _getPorts(script: string) {
-    const batchBuilder = PortNumberBuilder.fromServer(this.ns, this.target).batch()
-    let childBuilder: BasePortNumberBuilder
-
-    switch (script) {
-      case HACK_SCRIPT: {
-        childBuilder = batchBuilder.hack()
-        break
-      }
-      case WEAKEN_SCRIPT: {
-        childBuilder = batchBuilder.weaken()
-        break
-      }
-      case GROW_SCRIPT: {
-        childBuilder = batchBuilder.grow()
-        break
-      }
-    }
-
-    return [
-      PortNumberBuilder.fromServer(this.ns, this.ns.getHostname()).batch().parent().fillRandom(),
-      childBuilder.fillRandom(),
-    ]
   }
 }
 

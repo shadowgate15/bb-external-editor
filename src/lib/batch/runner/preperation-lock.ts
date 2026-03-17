@@ -7,7 +7,6 @@ import { inject, injectable } from 'inversify'
 import { NSIdentifier } from '../../ns.identifier'
 
 @injectable('Singleton')
-@provide()
 export class PreperationLock extends Semaphore {
   constructor(
     @inject(NSIdentifier)

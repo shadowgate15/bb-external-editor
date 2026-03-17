@@ -66,10 +66,10 @@ export class ThreadManager {
   }
 
   private get _sortedAllocatableServers() {
-    return Array.from(this._allocatableServers.values()).sort((a, b) => {
+    const ret = Array.from(this._allocatableServers.values()).sort((a, b) => {
       // If one of the servers is "home", prioritize it, since we want to run as many threads as possible on our own server before using up resources on other servers
-      if (a[0] === 'home') return -1
-      if (b[0] === 'home') return 1
+      if (a.name === 'home') return -1
+      if (b.name === 'home') return 1
 
       const diff = this.ramChecker.getMaxRam(b.name) - this.ramChecker.getMaxRam(a.name)
 
@@ -77,6 +77,8 @@ export class ThreadManager {
 
       return a.name.localeCompare(b.name)
     })
+
+    return ret
   }
 
   private filteredAllocatableServers(filter?: (server: string) => boolean) {

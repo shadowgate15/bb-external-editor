@@ -1,6 +1,5 @@
 import 'reflect-metadata'
 
-import { provide } from '@inversifyjs/binding-decorators'
 import { inject, injectable } from 'inversify'
 
 import { NSIdentifier } from '../../ns.identifier'
@@ -20,7 +19,6 @@ export interface Plan {
 const DELAY = 20
 
 @injectable('Singleton')
-@provide()
 export class ThreadPlanner {
   constructor(
     @inject(NSIdentifier)

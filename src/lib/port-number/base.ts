@@ -37,20 +37,33 @@ export class BasePortNumberBuilder {
       if (this.portArray[PortNumberType.Satyr] === '9') {
         this.portArray[PortNumberType.Nymph] = '00'
       } else {
-        this.portArray[PortNumberType.Nymph] = String(random(0, 71)).padStart(2, '0')
+        this.portArray[PortNumberType.Nymph] = String(random(0, 99)).padStart(2, '0')
       }
     }
 
     if (isNil(muse)) {
-      this.portArray[PortNumberType.Muse] = String(random(0, 99)).padStart(2, '0')
+      if (this.portArray[PortNumberType.Satyr] === '9' && this.portArray[PortNumberType.Nymph] === '00') {
+        this.portArray[PortNumberType.Muse] = String(random(0, 71)).padStart(2, '0')
+      } else {
+        this.portArray[PortNumberType.Muse] = String(random(0, 99)).padStart(2, '0')
+      }
     }
 
     if (isNil(hero)) {
-      this.portArray[PortNumberType.Hero] = String(random(0, 25)).padStart(2, '0')
+      this.portArray[PortNumberType.Hero] = String(random(0, 99)).padStart(2, '0')
     }
 
     if (isNil(titan)) {
-      this.portArray[PortNumberType.Titan] = String(random(0, 47)).padStart(2, '0')
+      if (
+        this.portArray[PortNumberType.Satyr] === '9' &&
+        this.portArray[PortNumberType.Nymph] === '00' &&
+        this.portArray[PortNumberType.Muse] === '71' &&
+        this.portArray[PortNumberType.Hero] === '99'
+      ) {
+        this.portArray[PortNumberType.Titan] = String(random(0, 47)).padStart(2, '0')
+      } else {
+        this.portArray[PortNumberType.Titan] = String(random(0, 99)).padStart(2, '0')
+      }
     }
 
     return this.build()

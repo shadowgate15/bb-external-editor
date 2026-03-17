@@ -1,8 +1,8 @@
-import { buildProviderModule } from '@inversifyjs/binding-decorators'
 import { Container, ContainerModule, Factory, ServiceIdentifier } from 'inversify'
 
 import { PriorityProvider } from '../runner/priority-provider'
 import { Batch } from './batch'
+import { ThreadPlanner } from './planner'
 
 export type IBatchFactory = Factory<Batch, [priority?: number]>
 export const BatchFactory: ServiceIdentifier<IBatchFactory> = Symbol('Batch')
@@ -12,7 +12,8 @@ export function buildBatchBatchModule(parentContainer: Container) {
     options.bind(BatchFactory).toFactory((_context) => async (priority) => {
       const container = new Container({ parent: parentContainer })
 
-      await container.load(buildProviderModule())
+      container.bind(ThreadPlanner).toSelf()
+      container.bind(Batch).toSelf()
 
       if (priority !== undefined) {
         container.bind(PriorityProvider).toConstantValue(priority)
