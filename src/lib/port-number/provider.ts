@@ -26,6 +26,8 @@ export class PortProvider {
       port = this._batchParent()
     }
 
+    this.ns.clearPort(port)
+
     this.usedPorts.add(port)
 
     return [port, () => this.usedPorts.delete(port)] as const
@@ -59,6 +61,8 @@ export class PortProvider {
     while (this.usedPorts.has(port)) {
       port = this._batchChild(script, target)
     }
+
+    this.ns.clearPort(port)
 
     this.usedPorts.add(port)
 
