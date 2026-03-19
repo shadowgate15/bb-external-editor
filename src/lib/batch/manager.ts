@@ -6,6 +6,7 @@ import { lastValueFrom, Subject } from 'rxjs'
 
 import { NSIdentifier } from '../ns.identifier'
 import { ServerList } from '../utils/server-list'
+import { BatchConfig } from './config'
 import { type BatchRunnerFactory, RunnerFactory } from './runner'
 import { BatchRunner } from './runner/runner'
 
@@ -29,10 +30,15 @@ export class BatchManager extends Subject<void> {
 
     @inject(RunnerFactory)
     private readonly batchRunnerFactory: BatchRunnerFactory,
+
+    @inject(BatchConfig)
+    private readonly config: BatchConfig,
   ) {
     super()
 
     this.ns.print('INFO BatchManager Initialized')
+
+    this.setupBatches()
 
     this.serverList.on('serverAdded', () => {
       this.setupBatches()
@@ -41,15 +47,13 @@ export class BatchManager extends Subject<void> {
     this.serverList.on('servers', () => {
       this.setupBatches()
     })
-
-    this.setupBatches()
   }
 
   start(): Promise<void> {
     return lastValueFrom(this)
   }
 
-  private async setupBatches() {
+  private readonly setupBatches = async () => {
     const servers = this.serverList
       .getAll()
       .filter((server) => this.validHackingLevel(server) && this.ns.hasRootAccess(server))
@@ -60,6 +64,33 @@ export class BatchManager extends Subject<void> {
       })
       .filter(([_, score]) => score > 0)
       .sort((a, b) => b[1] - a[1])
+
+    // Override with config server if it exists
+    const configServer = servers.find(([server]) => server === this.config.server())
+
+    if (configServer) {
+      if (this.batchRunner?.target === configServer[0] || this.prepRunner?.target === configServer[0]) {
+        return
+      }
+
+      const runner = await this.batchRunnerFactory(...configServer)
+
+      this.prepRunner?.stop()
+
+      this.prepRunner = runner
+
+      this.prepRunner.prep().then(() => {
+        // Only replace batch runner after preperation is complete
+        this.batchRunner?.stop()
+
+        this.batchRunner = this.prepRunner
+        this.prepRunner = null
+
+        return this.batchRunner.start()
+      })
+
+      return
+    }
 
     const [server, score] = servers.shift()
 
@@ -73,6 +104,7 @@ export class BatchManager extends Subject<void> {
         this.batchRunner?.stop()
 
         this.batchRunner = this.prepRunner
+        this.score = score
         this.prepRunner = null
 
         return this.batchRunner.start()

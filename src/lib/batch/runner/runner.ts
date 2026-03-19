@@ -32,7 +32,7 @@ export class BatchRunner {
     private readonly threadManager: ThreadManager,
 
     @inject(TargetProvider)
-    private readonly target: string,
+    readonly target: string,
 
     @inject(PriorityProvider)
     private readonly priority: number,

@@ -109,14 +109,29 @@ export class Batch {
    * This will run as many threads as possible for the batch, even if not all threads can be allocated.
    */
   async tryRun(prep?: boolean) {
-    return this.threadManager.advancedAllocate(
-      async (controller) => {
-        const plan = this.threadPlanner.planPrep(this.target)
+    return lastValueFrom(
+      new Observable<void>((subscriber) => {
+        this.threadManager
+          .advancedAllocate(
+            async (controller) => {
+              const plan = this.threadPlanner.planPrep(this.target)
 
-        await this._tryDeploy(plan, controller)
-      },
-      this.priority,
-      prep ? this._prepServerFilter.bind(this) : this._serverFilter.bind(this),
+              this._tryDeploy(plan, controller)
+                .then(() => {
+                  subscriber.next()
+                  subscriber.complete()
+                })
+                .catch((e) => {
+                  subscriber.error(e)
+                })
+            },
+            this.priority,
+            prep ? this._prepServerFilter.bind(this) : this._serverFilter.bind(this),
+          )
+          .catch((e) => {
+            subscriber.error(e)
+          })
+      }),
     )
   }
 

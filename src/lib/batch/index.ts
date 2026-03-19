@@ -2,6 +2,7 @@ import { buildProviderModule } from '@inversifyjs/binding-decorators'
 import { Container, ContainerModule } from 'inversify'
 
 import { PortProvider } from '../port-number'
+import { BatchConfig } from './config'
 import { buildRunnerModule } from './runner'
 
 export { BatchManager } from './manager'
@@ -9,6 +10,8 @@ export { BatchManager } from './manager'
 export function buildBatchModule(container: Container) {
   return new ContainerModule(async (options) => {
     await buildProviderModule().load(options)
+
+    options.bind(BatchConfig).toSelf()
 
     options.bind(PortProvider).toSelf()
 
