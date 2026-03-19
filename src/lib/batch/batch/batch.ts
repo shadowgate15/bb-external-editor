@@ -81,7 +81,7 @@ export class Batch {
    * so it is recommended to catch any errors when calling this method and handle them appropriately
    * (for example, by retrying after some time or by logging the error and moving on to the next batch).
    */
-  async run() {
+  async run(prep?: boolean) {
     return lastValueFrom(
       new Observable<void>((subscriber) => {
         this.threadManager
@@ -96,7 +96,7 @@ export class Batch {
               })
             },
             this.priority,
-            this._serverFilter.bind(this),
+            prep ? this._prepServerFilter.bind(this) : this._serverFilter.bind(this),
           )
           .catch((e) => {
             subscriber.error(e)
@@ -108,7 +108,7 @@ export class Batch {
   /**
    * This will run as many threads as possible for the batch, even if not all threads can be allocated.
    */
-  async tryRun() {
+  async tryRun(prep?: boolean) {
     return this.threadManager.advancedAllocate(
       async (controller) => {
         const plan = this.threadPlanner.planPrep(this.target)
@@ -116,7 +116,7 @@ export class Batch {
         await this._tryDeploy(plan, controller)
       },
       this.priority,
-      this._serverFilter.bind(this),
+      prep ? this._prepServerFilter.bind(this) : this._serverFilter.bind(this),
     )
   }
 
@@ -390,6 +390,17 @@ export class Batch {
 
   private _serverFilter(server: string) {
     return this.ns.hasRootAccess(server)
+  }
+
+  private _prepServerFilter(server: string) {
+    return (
+      this.ns.hasRootAccess(server) &&
+      server !== 'home' &&
+      !this.ns
+        .getPurchasedServers()
+        .filter((s) => !s.startsWith('prep'))
+        .includes(server)
+    )
   }
 }
 

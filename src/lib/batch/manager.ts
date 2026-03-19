@@ -14,7 +14,11 @@ import { BatchRunner } from './runner/runner'
 export class BatchManager extends Subject<void> {
   private batchRunner: BatchRunner | null = null
 
+  private prepRunner: BatchRunner | null = null
+
   private score: number = 0
+
+  private prepScore: number = 0
 
   constructor(
     @inject(NSIdentifier)
@@ -59,14 +63,20 @@ export class BatchManager extends Subject<void> {
 
     const [server, score] = servers.shift()
 
-    if (score > this.score) {
-      this.score = score
+    // Always maintain one prep runner
+    if (score > this.prepScore && this.prepRunner === null) {
+      this.prepScore = score
 
-      // Kill current batch runner if it exists
-      this.batchRunner?.stop()
+      this.prepRunner = await this.batchRunnerFactory(server, score)
+      this.prepRunner.prep().then(() => {
+        // Only replace batch runner after preperation is complete
+        this.batchRunner?.stop()
 
-      this.batchRunner = await this.batchRunnerFactory(server, score)
-      this.batchRunner.start()
+        this.batchRunner = this.prepRunner
+        this.prepRunner = null
+
+        return this.batchRunner.start()
+      })
     }
   }
 

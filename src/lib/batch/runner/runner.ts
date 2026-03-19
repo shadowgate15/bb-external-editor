@@ -40,7 +40,7 @@ export class BatchRunner {
     this.scriptAbortController.childController(this.abortController)
   }
 
-  async start() {
+  async prep() {
     const preparationPriority = this.priority * -1
 
     if (
@@ -52,7 +52,6 @@ export class BatchRunner {
           if (this.abortController.signal.aborted) return
 
           this.ns.toast(`Preparing "${this.target}" for hacking...`, 'info', null)
-          console.log(`BatchRunner: Starting preparation of "${this.target}"`)
           await this.ns.asleep(100) // Let the toast show before starting the preparation
 
           // Preration step
@@ -65,7 +64,7 @@ export class BatchRunner {
 
               const batch = await this.batchFactory(preparationPriority)
 
-              await batch.tryRun()
+              await batch.tryRun(true)
               await this.ns.asleep(50)
             } catch (error) {
               this.ns.print(`ERROR Batch failed to run:\n  ${error}`)
@@ -80,7 +79,9 @@ export class BatchRunner {
 
     this.ns.toast(`Preparation of "${this.target}" is complete. Starting hack...`, 'success', null)
     await this.ns.asleep(100) // Let the toast show before starting the preparation
+  }
 
+  async start() {
     // Hacking step
     while (true) {
       try {
