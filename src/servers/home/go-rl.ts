@@ -106,6 +106,18 @@ export async function main(ns: NS) {
         legal_moves: getLegalMoves(),
       })
     } else if (data.type === 'step') {
+      if (ns.go.getCurrentPlayer() === 'None') {
+        send<StepRecv>({
+          board: ns.go.getBoardState(),
+          current_player: getCurrentPlayer(),
+          legal_moves: getLegalMoves(),
+          reward: getReward(),
+          done: ns.go.getCurrentPlayer() === 'None',
+        })
+
+        return
+      }
+
       const move = getPositionFromAction(data.action)
 
       if (move === null) {
