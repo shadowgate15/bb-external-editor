@@ -2,8 +2,8 @@ import { GoOpponent } from '@ns'
 
 import { GoResult } from '@/lib/go'
 
-const BOARD_SIZE: 5 | 7 | 9 | 13 = 5
-const OPPONENT: GoOpponent = 'Netburners'
+let BOARD_SIZE: 5 | 7 | 9 | 13 = 5
+let OPPONENT: GoOpponent = 'Netburners'
 
 type GoGameState = {
   currentPlayer: 'White' | 'Black' | 'None'
@@ -16,6 +16,8 @@ type GoGameState = {
 
 interface ResetSend {
   type: 'reset'
+  opponent: GoOpponent
+  board_size: 5 | 7 | 9 | 13
 }
 interface ResetRecv {
   board: string[]
@@ -93,6 +95,8 @@ export async function main(ns: NS) {
     ns.print(`Received: `, data)
 
     if (data.type === 'reset') {
+      BOARD_SIZE = data.board_size
+      OPPONENT = data.opponent
       const board = ns.go.resetBoardState(OPPONENT, BOARD_SIZE)
       previousGameState = undefined
 
@@ -110,12 +114,14 @@ export async function main(ns: NS) {
         result = await ns.go.makeMove(move[0], move[1])
       }
 
+      result = await ns.go.opponentNextTurn()
+
       send<StepRecv>({
         board: ns.go.getBoardState(),
         current_player: getCurrentPlayer(),
         legal_moves: getLegalMoves(),
         reward: getReward(),
-        done: result?.type === 'gameOver',
+        done: ns.go.getCurrentPlayer() === 'None',
       })
     }
   })
