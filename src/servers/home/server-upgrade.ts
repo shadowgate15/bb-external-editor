@@ -26,6 +26,8 @@ export async function main(ns: NS) {
     ns.toast(`Servers have been upgraded to ${ns.formatRam(ram)}!`)
     factor++
   }
+
+  ns.alert('All server have been upgraded!')
 }
 
 function getServersToUpgrade(ns: NS, minRam: number): string[] {
