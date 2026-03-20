@@ -87,7 +87,7 @@ export class Batch {
         this.threadManager
           .advancedAllocate(
             async (controller) => {
-              const plan = this.threadPlanner.plan(this.target)
+              const plan = this.threadPlanner.plan()
 
               // NOTE: We are not awaiting this on purpose,
               // since the subscriber will be completed when the batch is done in the _deploy method,
@@ -114,7 +114,7 @@ export class Batch {
         this.threadManager
           .advancedAllocate(
             async (controller) => {
-              const plan = this.threadPlanner.planPrep(this.target)
+              const plan = this.threadPlanner.planPrep()
 
               this._tryDeploy(plan, controller)
                 .then(() => {
