@@ -79,14 +79,14 @@ export class BatchManager extends Subject<void> {
 
       this.prepRunner = runner
 
-      this.prepRunner.prep().then(() => {
+      runner.prep().then(() => {
         // Only replace batch runner after preperation is complete
         this.batchRunner?.stop()
 
-        this.batchRunner = this.prepRunner
+        this.batchRunner = runner
         this.prepRunner = null
 
-        return this.batchRunner.start()
+        return runner.start()
       })
 
       return
@@ -98,16 +98,17 @@ export class BatchManager extends Subject<void> {
     if (score > this.prepScore && this.prepRunner === null) {
       this.prepScore = score
 
-      this.prepRunner = await this.batchRunnerFactory(server, score)
+      const runner = await this.batchRunnerFactory(server, score)
+      this.prepRunner = runner
       this.prepRunner.prep().then(() => {
         // Only replace batch runner after preperation is complete
         this.batchRunner?.stop()
 
-        this.batchRunner = this.prepRunner
+        this.batchRunner = runner
         this.score = score
         this.prepRunner = null
 
-        return this.batchRunner.start()
+        return runner.start()
       })
     }
   }
