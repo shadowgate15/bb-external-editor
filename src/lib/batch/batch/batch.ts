@@ -201,8 +201,6 @@ export class Batch {
 
     const { subject, abortController, timeout } = this._setupDeploy(plan, subscriber)
 
-    console.log('Starting batch with the following plan:', plan)
-
     try {
       const processes = [
         await controller.allocate(

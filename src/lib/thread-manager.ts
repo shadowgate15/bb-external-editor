@@ -132,10 +132,6 @@ export class ThreadManager {
           allocate: async (threads, scriptRam, createProcess) => {
             const [unallocated, createProcessPromises] = await tryAllocate(threads, scriptRam, createProcess)
 
-            console.log('Allocation result', {
-              unallocated,
-              createProcessPromises,
-            })
             if (unallocated !== 0) {
               throw new NotEnoughRAMError()
             }
@@ -148,11 +144,6 @@ export class ThreadManager {
                 const allocatedThreads = allocatableServer.allocateThreads(threads, scriptRam)
 
                 if (allocatedThreads === threads) {
-                  console.log('Allocation one result', {
-                    allocatedThreads,
-                    threads,
-                  })
-
                   return await createProcess({
                     id: crypto.randomUUID(),
                     host: allocatableServer.name,
