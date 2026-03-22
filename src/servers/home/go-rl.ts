@@ -101,7 +101,7 @@ export async function main(ns: NS) {
       previousGameState = undefined
 
       send<ResetRecv>({
-        board: board,
+        board: board as string[],
         current_player: getCurrentPlayer(),
         legal_moves: getLegalMoves(),
       })
@@ -160,8 +160,4 @@ function getPositionFromAction(action: number): [x: number, y: number] | null {
   const col = action % BOARD_SIZE
 
   return [row, col]
-}
-
-function getActionFromResult(result: GoResult) {
-  return result.x * BOARD_SIZE + result.y
 }

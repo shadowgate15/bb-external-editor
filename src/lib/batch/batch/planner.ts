@@ -120,10 +120,14 @@ export class ThreadPlanner {
     const player = this.ns.getPlayer()
     const server = this.ns.getServer(this.target)
 
-    const hackMoney = server.moneyMax * (this.ns.formulas.hacking.hackPercent(server, player) * hackThreads)
+    const hackMoney = server.moneyMax
+      ? server.moneyMax * (this.ns.formulas.hacking.hackPercent(server, player) * hackThreads)
+      : undefined
 
-    server.moneyAvailable = server.moneyAvailable - hackMoney
-    server.hackDifficulty = server.hackDifficulty + this.ns.hackAnalyzeSecurity(hackThreads)
+    server.moneyAvailable = server.moneyAvailable && hackMoney ? server.moneyAvailable - hackMoney : undefined
+    server.hackDifficulty = server.hackDifficulty
+      ? server.hackDifficulty + this.ns.hackAnalyzeSecurity(hackThreads)
+      : undefined
 
     return server
   }
