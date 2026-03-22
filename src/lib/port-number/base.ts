@@ -94,4 +94,13 @@ export class BasePortNumberBuilder {
 
     return num
   }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  protected assignPort(portNumberType: PortNumberType, value: any) {
+    const portArray = [...this.portArray]
+
+    portArray[portNumberType] = String(value)
+
+    return portArray as PortArray
+  }
 }

@@ -1,5 +1,5 @@
 import { BasePortNumberBuilder, PortNumberType } from './base'
-import { BatchTitanPortNumberBuilder, Titan } from './titan'
+import { BatchTitanPortNumberBuilder, CorporationTitanPortNumberBuilder, Titan } from './titan'
 
 export { PortProvider } from './provider'
 
@@ -21,5 +21,9 @@ export class PortNumberBuilder extends BasePortNumberBuilder {
     portArray[PortNumberType.Titan] = String(Titan.Batch)
 
     return new BatchTitanPortNumberBuilder(this.portArray)
+  }
+
+  corporation() {
+    return new CorporationTitanPortNumberBuilder(this.assignPort(PortNumberType.Titan, Titan.Corporation))
   }
 }
