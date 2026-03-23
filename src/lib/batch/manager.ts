@@ -10,9 +10,13 @@ import { BatchConfig } from './config'
 import { type BatchRunnerFactory, RunnerFactory } from './runner'
 import { BatchRunner } from './runner/runner'
 
+const DATA_FILE = 'data/batch.json'
+
 @injectable('Singleton')
 @provide()
 export class BatchManager extends Subject<void> {
+  private initialized: boolean = false
+
   private batchRunner: BatchRunner | null = null
 
   private prepRunner: BatchRunner | null = null
@@ -36,6 +40,8 @@ export class BatchManager extends Subject<void> {
 
     this.ns.print('INFO BatchManager Initialized')
 
+    this.init()
+
     this.setupBatches()
 
     this.serverList.on('serverAdded', () => {
@@ -51,7 +57,39 @@ export class BatchManager extends Subject<void> {
     return lastValueFrom(this)
   }
 
+  private async init() {
+    if (this.initialized) return
+
+    const prepHost = this.prepHost()
+    if (prepHost) {
+      this.prepRunner = await this.batchRunnerFactory(prepHost)
+
+      this.prepRunner.prep().then(async () => {
+        this.batchRunner?.stop()
+
+        this.batchRunner = await this.batchRunnerFactory(prepHost)
+        this.batchHost(prepHost)
+
+        this.batchHost(null)
+        this.prepRunner = null
+
+        this.batchRunner.start()
+      })
+    }
+
+    const batchHost = this.batchHost()
+    if (batchHost) {
+      this.batchRunner = await this.batchRunnerFactory(batchHost)
+
+      this.batchRunner.start()
+    }
+
+    this.initialized = true
+  }
+
   private readonly setupBatches = async () => {
+    if (!this.initialized) return
+
     // No need to do any of this if we can't start prepping a server
     if (this.prepRunner !== null) return
 
@@ -77,12 +115,16 @@ export class BatchManager extends Subject<void> {
       const runner = await this.batchRunnerFactory(...configServer)
 
       this.prepRunner = runner
+      this.prepHost(configServer[0])
 
       runner.prep().then(() => {
         // Only replace batch runner after preperation is complete
         this.batchRunner?.stop()
 
         this.batchRunner = runner
+        this.batchHost(configServer[0])
+
+        this.prepHost(null)
         this.prepRunner = null
 
         return runner.start()
@@ -124,5 +166,29 @@ export class BatchManager extends Subject<void> {
     }
 
     return this.ns.getServerRequiredHackingLevel(server) <= hackingLevel
+  }
+
+  private _accessDataFile<T>(key: string, value?: T | null): T | null | undefined {
+    const data = JSON.parse(this.ns.read(DATA_FILE))
+
+    if (value === undefined) {
+      return data[key] as T
+    }
+
+    if (value === null) {
+      this.ns.write(DATA_FILE, JSON.stringify({ ...data }), 'w')
+    } else {
+      this.ns.write(DATA_FILE, JSON.stringify({ ...data, [key]: value }), 'w')
+    }
+
+    return value
+  }
+
+  private batchHost(value?: string | null) {
+    return this._accessDataFile<string>('batchHost', value)
+  }
+
+  private prepHost(value?: string | null) {
+    return this._accessDataFile<string>('prepHost', value)
   }
 }
