@@ -23,8 +23,8 @@ import {
 } from '../channel/parent'
 import { PriorityProvider } from '../runner/priority-provider'
 import { TargetProvider } from '../runner/target-provider'
+import { Plan, ThreadPlanner } from '../thread-planner'
 import { GROW_SCRIPT, HACK_SCRIPT, WEAKEN_SCRIPT } from './constants'
-import { Plan, ThreadPlanner } from './planner'
 
 export interface EventMap {
   release: []
@@ -87,7 +87,7 @@ export class Batch {
         this.threadManager
           .advancedAllocate(
             async (controller) => {
-              const plan = this.threadPlanner.plan()
+              const plan = this.threadPlanner.plan(this.ns.getServer(this.target))
 
               // NOTE: We are not awaiting this on purpose,
               // since the subscriber will be completed when the batch is done in the _deploy method,
@@ -114,7 +114,7 @@ export class Batch {
         this.threadManager
           .advancedAllocate(
             async (controller) => {
-              const plan = this.threadPlanner.planPrep()
+              const plan = this.threadPlanner.planPrep(this.ns.getServer(this.target))
 
               this._tryDeploy(plan, controller)
                 .then(() => {

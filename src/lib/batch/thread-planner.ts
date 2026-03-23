@@ -3,8 +3,7 @@ import 'reflect-metadata'
 import { Server } from '@ns'
 import { inject, injectable } from 'inversify'
 
-import { NSIdentifier } from '../../ns.identifier'
-import { TargetProvider } from '../runner/target-provider'
+import { NSIdentifier } from '../ns.identifier'
 
 export interface Plan {
   hackThreads: number
@@ -25,35 +24,31 @@ export class ThreadPlanner {
   constructor(
     @inject(NSIdentifier)
     private readonly ns: NS,
-
-    /** The host to target for the batch */
-    @inject(TargetProvider)
-    private readonly target: string,
   ) {
     this.ns.print('INFO ThreadPlanner Initialized')
   }
 
-  plan(): Plan {
-    const maxMoney = this.ns.getServerMaxMoney(this.target)
+  plan(target: Server): Plan {
+    const player = this.ns.getPlayer()
 
-    const growTime = this.ns.getGrowTime(this.target)
-    const weakenTime = this.ns.getWeakenTime(this.target)
-    const hackTime = this.ns.getHackTime(this.target)
+    const maxMoney = target.moneyMax ?? 0
 
-    const hackMoney = maxMoney * 0.2
-    // This should be a positive number, but just in case hackAnalyzeThreads returns a negative number, we set it to 0
-    const hackThreads = Math.max(Math.floor(this.ns.hackAnalyzeThreads(this.target, hackMoney)), 0)
+    const growTime = this.ns.formulas.hacking.growTime(target, player)
+    const weakenTime = this.ns.formulas.hacking.weakenTime(target, player)
+    const hackTime = this.ns.formulas.hacking.hackTime(target, player)
+
+    const hackThreads = Math.max(Math.floor(0.2 / this.ns.formulas.hacking.hackPercent(target, player)), 0)
     const hackDelay = weakenTime - hackTime - DELAY * 2
-    const hackSecurityIncrease = this.ns.hackAnalyzeSecurity(hackThreads, this.target)
+    const hackSecurityIncrease = this.ns.hackAnalyzeSecurity(hackThreads, target.hostname)
 
     const growThreads = Math.max(
-      this.ns.formulas.hacking.growThreads(this._getServerAfterHack(hackThreads), this.ns.getPlayer(), maxMoney),
+      this.ns.formulas.hacking.growThreads(this._getServerAfterHack(target, hackThreads), player, maxMoney),
       0,
     )
     const growDelay = weakenTime - growTime - DELAY
     // Don't provide target because the target is fully grown,
     // so the security increase would be 0.
-    const growSecurityIncrease = this.ns.growthAnalyzeSecurity(growThreads)
+    const growSecurityIncrease = this.ns.growthAnalyzeSecurity(growThreads, target.hostname)
 
     const weakenHackThreads = 0
     const weakenGrowThreads = this.calculateWeakenThreads(growSecurityIncrease + hackSecurityIncrease)
@@ -71,20 +66,20 @@ export class ThreadPlanner {
     }
   }
 
-  planPrep(): Plan {
-    const maxMoney = this.ns.getServerMaxMoney(this.target)
-    const availableMoney = this.ns.getServerMoneyAvailable(this.target)
-    const minSecurity = this.ns.getServerMinSecurityLevel(this.target)
+  planPrep(target: Server): Plan {
+    const player = this.ns.getPlayer()
 
-    const growTime = this.ns.getGrowTime(this.target)
-    const weakenTime = this.ns.getWeakenTime(this.target)
+    const maxMoney = target.moneyMax ?? 0
+    const minSecurity = target.minDifficulty ?? 0
 
-    const growMultiplier = availableMoney > 0 ? maxMoney / availableMoney : maxMoney
-    const growThreads = Math.max(Math.ceil(this.ns.growthAnalyze(this.target, growMultiplier)), 0)
+    const growTime = this.ns.formulas.hacking.growTime(target, player)
+    const weakenTime = this.ns.formulas.hacking.weakenTime(target, player)
+
+    const growThreads = this.ns.formulas.hacking.growThreads(target, player, maxMoney)
     const growDelay = weakenTime - growTime + DELAY
-    const growSecurityIncrease = this.ns.growthAnalyzeSecurity(growThreads)
+    const growSecurityIncrease = this.ns.growthAnalyzeSecurity(growThreads, target.hostname)
 
-    const currentSecurity = this.ns.getServerSecurityLevel(this.target)
+    const currentSecurity = target.hackDifficulty ?? 0
     const securityToReduce = currentSecurity - minSecurity
 
     const weakenHackThreads = this.calculateWeakenThreads(securityToReduce)
@@ -116,9 +111,9 @@ export class ThreadPlanner {
     return i
   }
 
-  _getServerAfterHack(hackThreads: number): Server {
+  _getServerAfterHack(_server: Server, hackThreads: number): Server {
     const player = this.ns.getPlayer()
-    const server = this.ns.getServer(this.target)
+    const server = { ..._server }
 
     const hackMoney = server.moneyMax
       ? server.moneyMax * (this.ns.formulas.hacking.hackPercent(server, player) * hackThreads)
