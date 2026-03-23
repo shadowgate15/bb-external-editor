@@ -17,8 +17,6 @@ export class BatchManager extends Subject<void> {
 
   private prepRunner: BatchRunner | null = null
 
-  private score: number = 0
-
   private prepScore: number = 0
 
   constructor(
@@ -54,6 +52,9 @@ export class BatchManager extends Subject<void> {
   }
 
   private readonly setupBatches = async () => {
+    // No need to do any of this if we can't start prepping a server
+    if (this.prepRunner !== null) return
+
     const servers = this.serverList
       .getAll()
       .filter((server) => this.validHackingLevel(server) && this.ns.hasRootAccess(server))
@@ -69,13 +70,11 @@ export class BatchManager extends Subject<void> {
     const configServer = servers.find(([server]) => server === this.config.server())
 
     if (configServer) {
-      if (this.batchRunner?.target === configServer[0] || this.prepRunner?.target === configServer[0]) {
+      if (this.batchRunner?.target === configServer[0]) {
         return
       }
 
       const runner = await this.batchRunnerFactory(...configServer)
-
-      this.prepRunner?.stop()
 
       this.prepRunner = runner
 
@@ -92,10 +91,15 @@ export class BatchManager extends Subject<void> {
       return
     }
 
-    const [server, score] = servers.shift()
+    const item = servers.shift()
+
+    // If we have no servers that we can hack, then there's nothing to prep
+    if (!item) return
+
+    const [server, score] = item
 
     // Always maintain one prep runner
-    if (score > this.prepScore && this.prepRunner === null) {
+    if (score > this.prepScore) {
       this.prepScore = score
 
       const runner = await this.batchRunnerFactory(server, score)
@@ -105,7 +109,6 @@ export class BatchManager extends Subject<void> {
         this.batchRunner?.stop()
 
         this.batchRunner = runner
-        this.score = score
         this.prepRunner = null
 
         return runner.start()
