@@ -68,28 +68,32 @@ export class BatchManager extends Subject<void> {
   private async init() {
     if (this.initialized) return
 
-    const prepHost = this.prepHost()
-    if (prepHost) {
-      this.prepRunner = await this.batchRunnerFactory(prepHost)
-
-      this.prepRunner.prep().then(async () => {
-        this.batchRunner?.stop()
-
-        this.batchRunner = await this.batchRunnerFactory(prepHost)
-        this.batchHost(prepHost)
-
-        this.batchHost(null)
-        this.prepRunner = null
-
-        this.batchRunner.start()
-      })
-    }
-
     const batchHost = this.batchHost()
     if (batchHost) {
       this.batchRunner = await this.batchRunnerFactory(batchHost)
 
       this.batchRunner.start()
+    }
+
+    const prepHost = this.prepHost()
+    if (prepHost) {
+      const score = this.ns.getServerMaxMoney(prepHost) / this.ns.getServerMinSecurityLevel(prepHost)
+
+      this.prepScore = score
+
+      this.prepRunner = await this.batchRunnerFactory(prepHost, score)
+
+      this.prepRunner.prep().then(async () => {
+        this.batchRunner?.stop()
+
+        this.batchRunner = await this.batchRunnerFactory(prepHost, score)
+        this.batchHost(prepHost)
+
+        this.prepHost(null)
+        this.prepRunner = null
+
+        this.batchRunner.start()
+      })
     }
 
     this.initialized = true
@@ -103,7 +107,13 @@ export class BatchManager extends Subject<void> {
 
     const servers = this.serverList
       .getAll()
-      .filter((server) => this.validHackingLevel(server) && this.ns.hasRootAccess(server) && this.haveEnoughRAM(server))
+      .filter(
+        (server) =>
+          this.batchRunner?.target !== server &&
+          this.validHackingLevel(server) &&
+          this.ns.hasRootAccess(server) &&
+          this.haveEnoughRAM(server),
+      )
       .map((server) => {
         const score = this.ns.getServerMaxMoney(server) / this.ns.getServerMinSecurityLevel(server)
 
@@ -222,7 +232,9 @@ export class BatchManager extends Subject<void> {
     }
 
     if (value === null) {
-      this.ns.write(DATA_FILE, JSON.stringify({ ...data }), 'w')
+      const { [key]: _, ...rest } = data
+
+      this.ns.write(DATA_FILE, JSON.stringify({ ...rest }), 'w')
     } else {
       this.ns.write(DATA_FILE, JSON.stringify({ ...data, [key]: value }), 'w')
     }
