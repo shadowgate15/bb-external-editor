@@ -5,10 +5,12 @@ import { inject, injectable } from 'inversify'
 import { lastValueFrom, Subject } from 'rxjs'
 
 import { NSIdentifier } from '../ns.identifier'
+import { RamChecker } from '../utils/ram-checker'
 import { ServerList } from '../utils/server-list'
 import { BatchConfig } from './config'
 import { type BatchRunnerFactory, RunnerFactory } from './runner'
 import { BatchRunner } from './runner/runner'
+import { ThreadPlanner } from './thread-planner'
 
 const DATA_FILE = 'data/batch.json'
 
@@ -35,6 +37,12 @@ export class BatchManager extends Subject<void> {
 
     @inject(BatchConfig)
     private readonly config: BatchConfig,
+
+    @inject(RamChecker)
+    private readonly ramChecker: RamChecker,
+
+    @inject(ThreadPlanner)
+    private readonly threadPlanner: ThreadPlanner,
   ) {
     super()
 
@@ -95,7 +103,7 @@ export class BatchManager extends Subject<void> {
 
     const servers = this.serverList
       .getAll()
-      .filter((server) => this.validHackingLevel(server) && this.ns.hasRootAccess(server))
+      .filter((server) => this.validHackingLevel(server) && this.ns.hasRootAccess(server) && this.haveEnoughRAM(server))
       .map((server) => {
         const score = this.ns.getServerMaxMoney(server) / this.ns.getServerMinSecurityLevel(server)
 
@@ -146,16 +154,48 @@ export class BatchManager extends Subject<void> {
 
       const runner = await this.batchRunnerFactory(server, score)
       this.prepRunner = runner
+      this.prepHost(server)
       this.prepRunner.prep().then(() => {
         // Only replace batch runner after preperation is complete
         this.batchRunner?.stop()
 
         this.batchRunner = runner
+        this.batchHost(server)
+
         this.prepRunner = null
+        this.prepHost(null)
 
         return runner.start()
       })
     }
+  }
+
+  private haveEnoughRAM(target: string): boolean {
+    const server = this.ns.getServer(target)
+
+    if (server.moneyMax === 0) return false
+
+    const { weakenGrowThreads, weakenHackThreads, hackThreads, growThreads } = this.threadPlanner.plan({
+      ...server,
+      moneyAvailable: server.moneyMax,
+      hackDifficulty: server.minDifficulty,
+    })
+    const weakenThreads = weakenGrowThreads + weakenHackThreads
+
+    const growRams = this.ns.getScriptRam('share/batch/grow.js') * growThreads
+    const requiredRams =
+      growThreads +
+      this.ns.getScriptRam('share/batch/weaken.js') * weakenThreads +
+      this.ns.getScriptRam('share/batch/hack.js') * hackThreads
+
+    const hasServerForGrow = this.serverList.getAll().some((server) => this.ramChecker.getMaxRam(server) > growRams)
+
+    if (!hasServerForGrow) return false
+
+    const totalRam =
+      this.serverList.getAll().reduce((total, server) => total + this.ramChecker.getMaxRam(server), 0) * 0.9
+
+    return totalRam >= requiredRams
   }
 
   private validHackingLevel(server: string) {
@@ -169,7 +209,13 @@ export class BatchManager extends Subject<void> {
   }
 
   private _accessDataFile<T>(key: string, value?: T | null): T | null | undefined {
-    const data = JSON.parse(this.ns.read(DATA_FILE))
+    const data = (() => {
+      try {
+        return JSON.parse(this.ns.read(DATA_FILE))
+      } catch {
+        return {}
+      }
+    })()
 
     if (value === undefined) {
       return data[key] as T
