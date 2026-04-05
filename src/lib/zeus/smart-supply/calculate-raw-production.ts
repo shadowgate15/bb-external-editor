@@ -1,6 +1,6 @@
 import { CorpIndustryName } from '@ns'
 
-export interface Opts {
+export interface CalculateRawProductionOpts {
   /** Industry of the division to calculate production for. */
   industry: CorpIndustryName
   /** Comes from ns.corporation.getOffice().employeeProductionByJob.Operations */
@@ -19,41 +19,22 @@ export interface Opts {
   hasSelfCorrectingAssemblers: boolean
   /** Wthether the "uPgrade: Fulcrum" research has been researched */
   hasUpgradeFulcrum: boolean
+  productionMultiplier: number
 }
 
-const DIVISION_RAW_PRODUCTION: Record<CorpIndustryName, number> = {
-  Agriculture: 1,
-  'Spring Water': 0,
-  'Water Utilities': 0,
-  Fishing: 0,
-  Mining: 0,
-  Refinery: 0,
-  Restaurant: 0,
-  Tobacco: 0,
-  Chemical: 0,
-  Pharmaceutical: 0,
-  'Computer Hardware': 0,
-  Robotics: 0,
-  Software: 0,
-  Healthcare: 0,
-  'Real Estate': 0,
-}
-
-export function calculateRawProduction(opts: Opts): number {
+export function calculateRawProduction(opts: CalculateRawProductionOpts): number {
   const officeMultiplier = caclulateOfficeMultiplier(opts)
-
-  const divisionRawProduction = DIVISION_RAW_PRODUCTION[opts.industry]
 
   const upgradeMultiplier = caclulateUpgradeMultiplier(opts)
 
   const researchMultiplier = calculateResearchMultiplier(opts)
 
-  const rawProduction = officeMultiplier * divisionRawProduction * upgradeMultiplier * researchMultiplier
+  const rawProduction = officeMultiplier * opts.productionMultiplier * upgradeMultiplier * researchMultiplier
 
   return rawProduction
 }
 
-function caclulateOfficeMultiplier(opts: Opts) {
+function caclulateOfficeMultiplier(opts: CalculateRawProductionOpts) {
   const { engineerEmployeeProduction, managementEmployeeProduction, operationsEmployeeProduction, makesProducts } = opts
 
   const totalEmployeeProduction =
@@ -73,7 +54,7 @@ function caclulateOfficeMultiplier(opts: Opts) {
   return officeMultiplier
 }
 
-function caclulateUpgradeMultiplier(opts: Opts) {
+function caclulateUpgradeMultiplier(opts: CalculateRawProductionOpts) {
   const { smartFactoryLevel } = opts
 
   const upgradeMutliplier = 1 + 0.03 * smartFactoryLevel
@@ -81,7 +62,7 @@ function caclulateUpgradeMultiplier(opts: Opts) {
   return upgradeMutliplier
 }
 
-function calculateResearchMultiplier(opts: Opts) {
+function calculateResearchMultiplier(opts: CalculateRawProductionOpts) {
   const { hasDronesAssembly, hasSelfCorrectingAssemblers, hasUpgradeFulcrum, makesProducts } = opts
 
   let productionMultiplier = 1

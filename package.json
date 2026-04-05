@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "start": "node ./config.mjs",
-    "lint": "eslint . --fix"
+    "lint": "eslint . --fix",
+    "test": "jest"
   },
   "repository": {
     "type": "git",
@@ -42,6 +43,7 @@
     "@eslint/js": "^10.0.1",
     "@eslint/markdown": "^7.5.1",
     "@tanstack/eslint-plugin-query": "5",
+    "@types/jest": "^30.0.0",
     "@types/lodash": "^4.17.24",
     "@types/node": "^25.3.5",
     "@types/react": "^17.0.2",
@@ -52,9 +54,13 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-simple-import-sort": "^12.1.1",
     "globals": "^17.4.0",
+    "jest": "^30.3.0",
+    "jest-environment-jsdom": "^30.3.0",
     "jiti": "^2.6.1",
     "prettier": "^3.8.1",
     "react": "^18.3.1",
+    "ts-jest": "^29.4.9",
+    "type-fest": "^5.5.0",
     "typescript-eslint": "^8.56.1",
     "unenv": "^1.10.0"
   },

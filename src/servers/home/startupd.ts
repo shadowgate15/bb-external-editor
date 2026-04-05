@@ -9,5 +9,6 @@ export async function main(ns: NS) {
 
   if (now - lastAugReset < 1000 * 60 && now - lastNodeReset < 1000 * 60) {
     ns.write('data/batch.json', JSON.stringify({}), 'w')
+    ns.write('data/zeus.json', JSON.stringify({}), 'w')
   }
 }

@@ -402,12 +402,12 @@ export class Batch {
   private _deployWeaken = this._makeDeploy(WEAKEN_SCRIPT)
 
   private _serverFilter(server: string) {
-    return this.ns.hasRootAccess(server)
+    return this.ns.hasRootAccess(server) && server !== 'corporation'
   }
 
   private _prepServerFilter(server: string) {
     return (
-      this.ns.hasRootAccess(server) &&
+      this._serverFilter(server) &&
       server !== 'home' &&
       !this.ns
         .getPurchasedServers()

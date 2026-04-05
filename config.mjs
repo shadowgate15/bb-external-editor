@@ -42,7 +42,7 @@ const createContext = async () =>
         types: 'NetscriptDefinitions.d.ts',
         remoteDebugging: true,
         mirror: {
-          // mirror: ['home'],
+          mirror: ['home'],
         },
         distribute: {},
       }),
