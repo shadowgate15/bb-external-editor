@@ -10,7 +10,7 @@ import { StateManager } from './state-manager'
 
 @injectable('Singleton')
 export class Corporation {
-  readonly info$: Observable<CorporationInfo> = this.stateManager.state$.pipe(
+  readonly info$: Observable<CorporationInfo> = this.stateManager.state$().pipe(
     switchMap(() => of(this.ns.corporation.getCorporation())),
     shareReplay(1),
   )
@@ -33,7 +33,7 @@ export class Corporation {
     shareReplay(1),
   )
 
-  readonly upgradeLevels$: Observable<Record<CorpUpgradeName, number>> = this.stateManager.state$.pipe(
+  readonly upgradeLevels$: Observable<Record<CorpUpgradeName, number>> = this.stateManager.state$().pipe(
     switchMap(() => from(this.ns.corporation.getConstants().upgradeNames)),
     reduce(
       (acc, upgradeName) => ({

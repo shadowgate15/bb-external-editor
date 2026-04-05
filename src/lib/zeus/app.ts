@@ -32,7 +32,7 @@ export class App {
     this.smartSupply.start()
 
     return new Promise<void>((resolve, reject) => {
-      this.stateManager.state$.pipe(ignoreElements()).subscribe({
+      this.stateManager.state$().pipe(ignoreElements()).subscribe({
         error: reject,
         complete: resolve,
       })
