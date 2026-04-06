@@ -7,11 +7,9 @@ import { concatMap, first, map, Observable, OperatorFunction, Subject, Subscribe
 
 import { NSIdentifier } from '@/lib/ns.identifier'
 import { PortNumberBuilder } from '@/lib/port-number'
-import { observableMutex } from '@/lib/utils/observable-mutex'
 
 import {
   Response,
-  ResponseWithKind,
   ServerMethodMap,
   ServerResponseKind,
   SuccessfulResponse,
