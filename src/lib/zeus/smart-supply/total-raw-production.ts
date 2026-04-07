@@ -17,7 +17,7 @@ import { getLimitedRawProduction } from './get-limited-raw-production'
 
 @injectable('Singleton')
 export class TotalRawProduction {
-  readonly rawProduction$: Observable<Record<string, number>> = this.divisions.eachDivisionNameAndCityName$.pipe(
+  readonly rawProduction$: Observable<Record<string, number>> = this.divisions.eachDivisionNameAndCityName$().pipe(
     mergeMap(({ divisionName, cityName }) =>
       combineLatest({
         division: this.divisions.divisionFor$(divisionName),
@@ -62,7 +62,7 @@ export class TotalRawProduction {
     shareReplay(1),
   )
 
-  readonly totalRawProduction$: Observable<Record<string, number>> = this.divisions.eachDivisionNameAndCityName$.pipe(
+  readonly totalRawProduction$: Observable<Record<string, number>> = this.divisions.eachDivisionNameAndCityName$().pipe(
     mergeMap(({ divisionName, cityName }) =>
       combineLatest({
         division: this.divisions.divisionFor$(divisionName).pipe(single()),

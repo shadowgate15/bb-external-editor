@@ -87,7 +87,7 @@ export class SmartSupply {
         filter((value) => value),
         tap(() => this.ns.print('INFO Detected upcoming purchase, buying input materials...')),
         switchMap(() =>
-          this.divisions.eachDivisionNameAndCityName$.pipe(
+          this.divisions.eachDivisionNameAndCityName$().pipe(
             mergeMap(({ divisionName, cityName }) =>
               combineLatest({
                 division: this.divisions.divisionFor$(divisionName),

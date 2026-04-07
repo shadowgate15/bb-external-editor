@@ -10,7 +10,7 @@ import { Divisions } from './divisions'
 
 @injectable('Singleton')
 export class Warehouses {
-  readonly info$: Observable<Record<string, Warehouse>> = this.divisions.eachDivisionNameAndCityName$.pipe(
+  readonly info$: Observable<Record<string, Warehouse>> = this.divisions.eachDivisionNameAndCityName$().pipe(
     map(({ divisionName, cityName }) => ({
       divisionName,
       cityName,

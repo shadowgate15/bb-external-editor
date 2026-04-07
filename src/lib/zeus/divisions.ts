@@ -10,7 +10,7 @@ import { delimited } from './delimited'
 
 @injectable('Singleton')
 export class Divisions {
-  readonly info$: Observable<Record<string, Division>> = this.corporation.divisionNames$().pipe(
+  readonly _info$: Observable<Record<string, Division>> = this.corporation.divisionNames$().pipe(
     switchMap((divisionNames) => from(divisionNames)),
     map((divisionName) => this.ns.corporation.getDivision(divisionName)),
     reduce((acc, division) => ({ ...acc, [division.name]: division }), {}),
@@ -18,14 +18,14 @@ export class Divisions {
   )
 
   /** key: division name, value: city names */
-  readonly divisionCity$: Observable<Record<string, CityName[]>> = this.info$.pipe(
+  readonly _divisionCity$: Observable<Record<string, CityName[]>> = this._info$.pipe(
     switchMap((divisions) => from(Object.values(divisions))),
     reduce((acc, division) => ({ ...acc, [division.name]: division.cities }), {}),
     shareReplay(1),
   )
 
-  readonly eachDivisionNameAndCityName$: Observable<{ divisionName: string; cityName: CityName }> =
-    this.divisionCity$.pipe(
+  readonly _eachDivisionNameAndCityName$: Observable<{ divisionName: string; cityName: CityName }> =
+    this._divisionCity$.pipe(
       switchMap((divisionCity) => from(Object.entries(divisionCity))),
       mergeMap(([divisionName, cityNames]) =>
         from(cityNames).pipe(
@@ -38,7 +38,7 @@ export class Divisions {
     )
 
   /** key: {division name}-{city name}, value: products */
-  readonly divisionCityProducts$: Observable<Record<string, Product[]>> = this.eachDivisionNameAndCityName$.pipe(
+  readonly _divisionCityProducts$: Observable<Record<string, Product[]>> = this._eachDivisionNameAndCityName$.pipe(
     mergeMap(({ divisionName, cityName }) =>
       this.divisionFor$(divisionName).pipe(
         mergeMap((division) =>
@@ -63,7 +63,7 @@ export class Divisions {
   )
 
   /** key: {division name}-{city name}, value: materials */
-  readonly divisionCityMaterials$: Observable<Record<string, Material[]>> = this.eachDivisionNameAndCityName$.pipe(
+  readonly _divisionCityMaterials$: Observable<Record<string, Material[]>> = this._eachDivisionNameAndCityName$.pipe(
     mergeMap(({ divisionName, cityName }) =>
       from(this.ns.corporation.getConstants().materialNames).pipe(
         map((materialName) => this.ns.corporation.getMaterial(divisionName, cityName, materialName)),
@@ -91,8 +91,28 @@ export class Divisions {
     private readonly corporation: Corporation,
   ) {}
 
+  info$() {
+    return this._info$
+  }
+
+  divisionCity$() {
+    return this._divisionCity$
+  }
+
+  eachDivisionNameAndCityName$() {
+    return this._eachDivisionNameAndCityName$
+  }
+
+  divisionCityProducts$() {
+    return this._divisionCityProducts$
+  }
+
+  divisionCityMaterials$() {
+    return this._divisionCityMaterials$
+  }
+
   divisionFor$(divisionName: string): Observable<Division> {
-    return this.info$.pipe(
+    return this._info$.pipe(
       mergeMap((divisions) => from(Object.values(divisions))),
       filter((division) => division.name === divisionName),
       single(),
@@ -100,14 +120,14 @@ export class Divisions {
   }
 
   divisionCityProductsFor$(divisionName: string, cityName: CityName): Observable<Product[]> {
-    return this.divisionCityProducts$.pipe(
+    return this._divisionCityProducts$.pipe(
       map((divisionCityProducts) => divisionCityProducts[delimited(divisionName, cityName)]),
       single(),
     )
   }
 
   divisionCityMaterialsFor$(divisionName: string, cityName: CityName): Observable<Material[]> {
-    return this.divisionCityMaterials$.pipe(
+    return this._divisionCityMaterials$.pipe(
       map((divisionCityMaterials) => divisionCityMaterials[delimited(divisionName, cityName)]),
       single(),
     )
