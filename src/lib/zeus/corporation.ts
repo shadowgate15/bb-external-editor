@@ -10,30 +10,30 @@ import { StateManager } from './state-manager'
 
 @injectable('Singleton')
 export class Corporation {
-  readonly info$: Observable<CorporationInfo> = this.stateManager.state$().pipe(
+  readonly _info$: Observable<CorporationInfo> = this.stateManager.state$().pipe(
     switchMap(() => of(this.ns.corporation.getCorporation())),
     shareReplay(1),
   )
 
   /** The next state the corporation will transition to */
-  readonly nextState$: Observable<CorpStateName> = this.info$.pipe(
+  readonly _nextState$: Observable<CorpStateName> = this._info$.pipe(
     map((info) => info.nextState),
     shareReplay(1),
   )
 
   /** The previous state the corporation transitioned from */
-  readonly previousState$: Observable<CorpStateName> = this.info$.pipe(
+  readonly _previousState$: Observable<CorpStateName> = this._info$.pipe(
     map((info) => info.prevState),
     tap((state) => this.ns.print(`Previous corporation state: ${state}`)),
     shareReplay(1),
   )
 
-  readonly divisionNames$: Observable<string[]> = this.info$.pipe(
+  readonly _divisionNames$: Observable<string[]> = this.info$().pipe(
     map((info) => info.divisions),
     shareReplay(1),
   )
 
-  readonly upgradeLevels$: Observable<Record<CorpUpgradeName, number>> = this.stateManager.state$().pipe(
+  readonly _upgradeLevels$: Observable<Record<CorpUpgradeName, number>> = this.stateManager.state$().pipe(
     switchMap(() => from(this.ns.corporation.getConstants().upgradeNames)),
     reduce(
       (acc, upgradeName) => ({
@@ -46,7 +46,7 @@ export class Corporation {
   )
 
   /** `{divisionName}|{researchName}` delimited key */
-  readonly hasResearched$: Observable<Record<string, boolean>> = this.divisionNames$.pipe(
+  readonly _hasResearched$: Observable<Record<string, boolean>> = this._divisionNames$.pipe(
     switchMap((divisionNames) => from(divisionNames)),
     mergeMap((divisionName) =>
       from(this.ns.corporation.getConstants().researchNames).pipe(
@@ -75,21 +75,45 @@ export class Corporation {
     private readonly stateManager: StateManager,
   ) {}
 
+  info$() {
+    return this._info$
+  }
+
+  nextState$() {
+    return this._nextState$
+  }
+
+  previousState$() {
+    return this._previousState$
+  }
+
+  divisionNames$() {
+    return this._divisionNames$
+  }
+
+  upgradeLevels$() {
+    return this._upgradeLevels$
+  }
+
+  hasResearched$() {
+    return this._hasResearched$
+  }
+
   upgradeLevelFor$(upgradeName: CorpUpgradeName): Observable<number> {
-    return this.upgradeLevels$.pipe(
+    return this._upgradeLevels$.pipe(
       map((upgradeLevels) => upgradeLevels[upgradeName]),
       single(),
     )
   }
 
   hasResearchedFor$(divisionName: string, researchName: CorpResearchName): Observable<boolean> {
-    return this.hasResearched$.pipe(
+    return this._hasResearched$.pipe(
       map((hasResearched) => hasResearched[delimited(divisionName, researchName)]),
       single(),
     )
   }
 
   previousStateOf$(stateName: CorpStateName): Observable<boolean> {
-    return this.previousState$.pipe(map((previousState) => previousState === stateName))
+    return this._previousState$.pipe(map((previousState) => previousState === stateName))
   }
 }

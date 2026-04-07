@@ -10,7 +10,7 @@ import { delimited } from './delimited'
 
 @injectable('Singleton')
 export class Divisions {
-  readonly info$: Observable<Record<string, Division>> = this.corporation.divisionNames$.pipe(
+  readonly info$: Observable<Record<string, Division>> = this.corporation.divisionNames$().pipe(
     switchMap((divisionNames) => from(divisionNames)),
     map((divisionName) => this.ns.corporation.getDivision(divisionName)),
     reduce((acc, division) => ({ ...acc, [division.name]: division }), {}),

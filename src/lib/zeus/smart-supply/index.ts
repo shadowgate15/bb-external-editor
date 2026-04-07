@@ -79,7 +79,8 @@ export class SmartSupply {
   }
 
   private _beforePurchase() {
-    this.corporation.nextState$
+    this.corporation
+      .nextState$()
       .pipe(
         map((state) => state === 'PURCHASE'),
         distinct(),
