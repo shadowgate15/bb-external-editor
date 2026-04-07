@@ -9,7 +9,7 @@ import { ServerResponseKind } from './daemon/server.interface'
 
 @injectable('Singleton')
 export class IndustryData {
-  readonly data$: Observable<Record<CorpIndustryName, CorpIndustryData>> = this.server
+  readonly _data$: Observable<Record<CorpIndustryName, CorpIndustryData>> = this.server
     .exec$(ServerResponseKind.GetIndustryData, 'corporation/get-industry-data.js')
     .pipe(shareReplay(1))
 
@@ -17,6 +17,10 @@ export class IndustryData {
     @inject(CorporationDaemonServer)
     private readonly server: CorporationDaemonServer,
   ) {
-    this.data$.subscribe()
+    this._data$.subscribe()
+  }
+
+  data$() {
+    return this._data$
   }
 }

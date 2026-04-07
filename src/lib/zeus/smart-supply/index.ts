@@ -153,7 +153,7 @@ export class SmartSupply {
               ),
             )
 
-          const requiredMaterials$ = this.industryData.data$.pipe(
+          const requiredMaterials$ = this.industryData.data$().pipe(
             first(),
             map((industryData) => industryData[division.type]),
             map((industry) => industry.requiredMaterials),

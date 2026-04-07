@@ -9,7 +9,7 @@ import { ServerResponseKind } from './daemon/server.interface'
 
 @injectable('Singleton')
 export class MaterialData {
-  readonly data$: Observable<Record<CorpMaterialName, CorpMaterialConstantData>> = this.server
+  readonly _data$: Observable<Record<CorpMaterialName, CorpMaterialConstantData>> = this.server
     .exec$(ServerResponseKind.GetMaterialData, 'corporation/get-material-data.js')
     .pipe(shareReplay(1))
 
@@ -17,6 +17,10 @@ export class MaterialData {
     @inject(CorporationDaemonServer)
     private readonly server: CorporationDaemonServer,
   ) {
-    this.data$.subscribe()
+    this._data$.subscribe()
+  }
+
+  data$() {
+    return this._data$
   }
 }

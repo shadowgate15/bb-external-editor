@@ -78,8 +78,8 @@ export class TotalRawProduction {
         division: of(division),
         cityName: of(cityName),
         rawProduction: of(rawProduction),
-        outputUnitSpace: this.materialData.data$,
-        producedMaterials: this.industryData.data$.pipe(
+        outputUnitSpace: this.materialData.data$(),
+        producedMaterials: this.industryData.data$().pipe(
           map((industryData) => industryData[division.type].producedMaterials),
           single(),
         ),
