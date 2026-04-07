@@ -5,6 +5,7 @@ import { ignoreElements } from 'rxjs'
 
 import { NSIdentifier } from '../ns.identifier'
 import { CorporationDaemonServer } from './daemon/server'
+import { Seller } from './seller'
 import { SmartSupply } from './smart-supply'
 import { StateManager } from './state-manager'
 
@@ -22,6 +23,9 @@ export class App {
 
     @inject(SmartSupply)
     private readonly smartSupply: SmartSupply,
+
+    @inject(Seller)
+    private readonly seller: Seller,
   ) {
     this.ns.atExit(() => {
       this.server.close()
@@ -30,6 +34,7 @@ export class App {
 
   async run() {
     this.smartSupply.start()
+    this.seller.start()
 
     return new Promise<void>((resolve, reject) => {
       this.stateManager.state$().pipe(ignoreElements()).subscribe({

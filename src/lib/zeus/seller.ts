@@ -2,7 +2,7 @@ import 'reflect-metadata'
 
 import { CityName, CorpIndustryData, Division, Material, Office, Product } from '@ns'
 import { inject, injectable } from 'inversify'
-import { combineLatest, filter, from, last, map, merge, mergeMap, Observable, switchMap } from 'rxjs'
+import { combineLatest, filter, first, from, last, map, merge, mergeMap, Observable, switchMap, tap } from 'rxjs'
 
 import { NSIdentifier } from '../ns.identifier'
 import { Corporation } from './corporation'
@@ -124,6 +124,7 @@ export class Seller {
   readonly optimalSellingPrice$: Observable<SellRecord> = this.corporation.nextState$().pipe(
     // only act during the SALE state
     filter((state) => state === 'SALE'),
+    tap(() => this.ns.print('INFO Detected SALE state, computing optimal selling prices...')),
     switchMap(() =>
       this.divisions
         .eachDivisionNameAndCityName$()
@@ -193,13 +194,15 @@ export class Seller {
       division: this.divisions.divisionFor$(divisionName),
       office: this.offices.infoFor$(divisionName, cityName),
       materials: this.divisions.divisionCityMaterialsFor$(divisionName, cityName),
-      industryData: this.industryData.data$(),
-      materialData: this.materialData.data$(),
-      upgradeLevels: this.corporation.upgradeLevels$(),
+      industryData: this.industryData.data$().pipe(first()),
+      materialData: this.materialData.data$().pipe(first()),
+      upgradeLevels: this.corporation.upgradeLevels$().pipe(first()),
     }).pipe(
       last(),
       mergeMap(({ division, office, materials, industryData, materialData, upgradeLevels }) =>
         from(materials).pipe(
+          filter((material) => material.stored > 0),
+          filter((material) => material.productionAmount > 0),
           mergeMap((material) => {
             const record = this._computeMaterialRecord(
               divisionName,
@@ -235,12 +238,14 @@ export class Seller {
       division: this.divisions.divisionFor$(divisionName),
       office: this.offices.infoFor$(divisionName, cityName),
       products: this.divisions.divisionCityProductsFor$(divisionName, cityName),
-      industryData: this.industryData.data$(),
-      upgradeLevels: this.corporation.upgradeLevels$(),
+      industryData: this.industryData.data$().pipe(first()),
+      upgradeLevels: this.corporation.upgradeLevels$().pipe(first()),
     }).pipe(
       last(),
       mergeMap(({ division, office, products, industryData, upgradeLevels }) =>
         from(products).pipe(
+          filter((product) => product.stored > 0),
+          filter((product) => product.productionAmount > 0),
           map((product) =>
             this._computeProductRecord(
               divisionName,
@@ -282,6 +287,7 @@ export class Seller {
     baseMarkup: number,
     salesBotsLevel: number,
   ): SellRecord | null {
+    console.log(`DEBUG Computing sell record for material ${material.name} in ${divisionName} / ${cityName}`)
     if (!material.marketPrice) return null
 
     const itemMultiplier = material.quality + 0.001
