@@ -212,11 +212,6 @@ export class SmartSupply {
         })),
       ),
     ),
-    tap(({ divisionName, cityName, materialName, amount }) => {
-      this.ns.print(
-        `INFO Planning to buy ${amount.toFixed(2)} of ${materialName} for ${divisionName} in ${cityName}...`,
-      )
-    }),
   )
 
   constructor(
