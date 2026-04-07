@@ -7,6 +7,7 @@ import { Divisions } from './divisions'
 import { IndustryData } from './industry-data'
 import { MaterialData } from './material-data'
 import { Offices } from './offices'
+import { Seller } from './seller'
 import { SmartSupply } from './smart-supply'
 import { TotalRawProduction } from './smart-supply/total-raw-production'
 import { StateManager } from './state-manager'
@@ -17,6 +18,7 @@ export const zeusModule = new ContainerModule((options) => {
   options.bind(CorporationDaemonServer).toSelf()
   options.bind(StateManager).toSelf()
   options.bind(SmartSupply).toSelf()
+  options.bind(Seller).toSelf()
   options.bind(Corporation).toSelf()
   options.bind(Divisions).toSelf()
   options.bind(Offices).toSelf()
