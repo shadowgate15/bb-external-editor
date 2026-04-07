@@ -2,7 +2,7 @@ import 'reflect-metadata'
 
 import { CorporationInfo, CorpResearchName, CorpStateName, CorpUpgradeName } from '@ns'
 import { inject, injectable } from 'inversify'
-import { from, map, mergeMap, Observable, of, reduce, shareReplay, single, switchMap, tap } from 'rxjs'
+import { first, from, map, mergeMap, Observable, of, reduce, scan, shareReplay, single, switchMap, tap } from 'rxjs'
 
 import { NSIdentifier } from '../ns.identifier'
 import { delimited } from './delimited'
@@ -50,14 +50,17 @@ export class Corporation {
    */
   readonly _upgradeLevels$: Observable<Record<CorpUpgradeName, number>> = this.stateManager.state$().pipe(
     // emit one upgradeName at a time from the full list
-    switchMap(() => from(this.ns.corporation.getConstants().upgradeNames)),
-    // accumulate {upgradeName → level} into a single record
-    reduce(
-      (acc, upgradeName) => ({
-        ...acc,
-        [upgradeName]: this.ns.corporation.getUpgradeLevel(upgradeName),
-      }),
-      {} as Record<CorpUpgradeName, number>,
+    switchMap(() =>
+      from(this.ns.corporation.getConstants().upgradeNames).pipe(
+        // accumulate {upgradeName → level} into a single record
+        reduce(
+          (acc, upgradeName) => ({
+            ...acc,
+            [upgradeName]: this.ns.corporation.getUpgradeLevel(upgradeName),
+          }),
+          {} as Record<CorpUpgradeName, number>,
+        ),
+      ),
     ),
     shareReplay(1),
   )
@@ -68,24 +71,27 @@ export class Corporation {
    */
   readonly _hasResearched$: Observable<Record<string, boolean>> = this._divisionNames$.pipe(
     // flatten division names into individual emissions
-    switchMap((divisionNames) => from(divisionNames)),
-    // for each division, pair it with every research name and check if it's been researched
-    mergeMap((divisionName) =>
-      from(this.ns.corporation.getConstants().researchNames).pipe(
-        map((researchName) => ({
-          divisionName,
-          researchName,
-          hasResearch: this.ns.corporation.hasResearched(divisionName, researchName),
-        })),
+    switchMap((divisionNames) =>
+      from(divisionNames).pipe(
+        // for each division, pair it with every research name and check if it's been researched
+        mergeMap((divisionName) =>
+          from(this.ns.corporation.getConstants().researchNames).pipe(
+            map((researchName) => ({
+              divisionName,
+              researchName,
+              hasResearch: this.ns.corporation.hasResearched(divisionName, researchName),
+            })),
+          ),
+        ),
+        // collect all pairs into a flat record keyed by "divisionName|researchName"
+        reduce(
+          (acc, { divisionName, researchName, hasResearch }) => ({
+            ...acc,
+            [delimited(divisionName, researchName)]: hasResearch,
+          }),
+          {} as Record<string, boolean>,
+        ),
       ),
-    ),
-    // collect all pairs into a flat record keyed by "divisionName|researchName"
-    reduce(
-      (acc, { divisionName, researchName, hasResearch }) => ({
-        ...acc,
-        [delimited(divisionName, researchName)]: hasResearch,
-      }),
-      {} as Record<string, boolean>,
     ),
     shareReplay(1),
   )
@@ -137,7 +143,8 @@ export class Corporation {
   upgradeLevelFor$(upgradeName: CorpUpgradeName): Observable<number> {
     return this._upgradeLevels$.pipe(
       map((upgradeLevels) => upgradeLevels[upgradeName]),
-      single(),
+      // wait for the upgrade level to be available
+      first((level) => level !== undefined),
     )
   }
 
@@ -151,7 +158,7 @@ export class Corporation {
   hasResearchedFor$(divisionName: string, researchName: CorpResearchName): Observable<boolean> {
     return this._hasResearched$.pipe(
       map((hasResearched) => hasResearched[delimited(divisionName, researchName)]),
-      single(),
+      first((has) => has !== undefined),
     )
   }
 

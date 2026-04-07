@@ -54,8 +54,8 @@ describe('Corporation', () => {
       jest.mocked(mockNs.corporation.getCorporation).mockReturnValue(info)
 
       testScheduler.run(({ cold, expectObservable }) => {
-        stateManagerMock.state$.mockReturnValue(cold<CorpStateName>('(a|)', { a: 'START' }))
-        expectObservable(getSut().info$()).toBe('(a|)', { a: info })
+        stateManagerMock.state$.mockReturnValue(cold<CorpStateName>('(a)', { a: 'START' }))
+        expectObservable(getSut().info$()).toBe('(a)', { a: info })
       })
     })
 
@@ -88,8 +88,8 @@ describe('Corporation', () => {
       jest.mocked(mockNs.corporation.getCorporation).mockReturnValue(makeCorporationInfo({ nextState: 'PURCHASE' }))
 
       testScheduler.run(({ cold, expectObservable }) => {
-        stateManagerMock.state$.mockReturnValue(cold<CorpStateName>('(a|)', { a: 'START' }))
-        expectObservable(getSut().nextState$()).toBe('(a|)', { a: 'PURCHASE' as CorpStateName })
+        stateManagerMock.state$.mockReturnValue(cold<CorpStateName>('(a)', { a: 'START' }))
+        expectObservable(getSut().nextState$()).toBe('(a)', { a: 'PURCHASE' as CorpStateName })
       })
     })
 
@@ -100,8 +100,8 @@ describe('Corporation', () => {
         .mockReturnValueOnce(makeCorporationInfo({ nextState: 'PRODUCTION' }))
 
       testScheduler.run(({ cold, expectObservable }) => {
-        stateManagerMock.state$.mockReturnValue(cold<CorpStateName>('a-b|', { a: 'START', b: 'PURCHASE' }))
-        expectObservable(getSut().nextState$()).toBe('a-b|', {
+        stateManagerMock.state$.mockReturnValue(cold<CorpStateName>('a-b', { a: 'START', b: 'PURCHASE' }))
+        expectObservable(getSut().nextState$()).toBe('a-b', {
           a: 'PURCHASE' as CorpStateName,
           b: 'PRODUCTION' as CorpStateName,
         })
@@ -114,8 +114,8 @@ describe('Corporation', () => {
       jest.mocked(mockNs.corporation.getCorporation).mockReturnValue(makeCorporationInfo({ prevState: 'PRODUCTION' }))
 
       testScheduler.run(({ cold, expectObservable }) => {
-        stateManagerMock.state$.mockReturnValue(cold<CorpStateName>('(a|)', { a: 'START' }))
-        expectObservable(getSut().previousState$()).toBe('(a|)', { a: 'PRODUCTION' as CorpStateName })
+        stateManagerMock.state$.mockReturnValue(cold<CorpStateName>('(a)', { a: 'START' }))
+        expectObservable(getSut().previousState$()).toBe('(a)', { a: 'PRODUCTION' as CorpStateName })
       })
     })
 
@@ -126,8 +126,8 @@ describe('Corporation', () => {
         .mockReturnValueOnce(makeCorporationInfo({ prevState: 'PRODUCTION' }))
 
       testScheduler.run(({ cold, expectObservable }) => {
-        stateManagerMock.state$.mockReturnValue(cold<CorpStateName>('a-b|', { a: 'START', b: 'PURCHASE' }))
-        expectObservable(getSut().previousState$()).toBe('a-b|', {
+        stateManagerMock.state$.mockReturnValue(cold<CorpStateName>('a-b', { a: 'START', b: 'PURCHASE' }))
+        expectObservable(getSut().previousState$()).toBe('a-b', {
           a: 'PURCHASE' as CorpStateName,
           b: 'PRODUCTION' as CorpStateName,
         })
@@ -146,8 +146,8 @@ describe('Corporation', () => {
         .mockReturnValue(makeCorporationInfo({ divisions: ['AgriCorp', 'TechCorp'] }))
 
       testScheduler.run(({ cold, expectObservable }) => {
-        stateManagerMock.state$.mockReturnValue(cold<CorpStateName>('(a|)', { a: 'START' }))
-        expectObservable(getSut().divisionNames$()).toBe('(a|)', { a: ['AgriCorp', 'TechCorp'] })
+        stateManagerMock.state$.mockReturnValue(cold<CorpStateName>('(a)', { a: 'START' }))
+        expectObservable(getSut().divisionNames$()).toBe('(a)', { a: ['AgriCorp', 'TechCorp'] })
       })
     })
 
@@ -158,8 +158,8 @@ describe('Corporation', () => {
         .mockReturnValueOnce(makeCorporationInfo({ divisions: ['AgriCorp', 'TechCorp'] }))
 
       testScheduler.run(({ cold, expectObservable }) => {
-        stateManagerMock.state$.mockReturnValue(cold<CorpStateName>('a-b|', { a: 'START', b: 'PURCHASE' }))
-        expectObservable(getSut().divisionNames$()).toBe('a-b|', {
+        stateManagerMock.state$.mockReturnValue(cold<CorpStateName>('a-b', { a: 'START', b: 'PURCHASE' }))
+        expectObservable(getSut().divisionNames$()).toBe('a-b', {
           a: ['AgriCorp'],
           b: ['AgriCorp', 'TechCorp'],
         })
@@ -172,8 +172,8 @@ describe('Corporation', () => {
       jest.mocked(mockNs.corporation.getUpgradeLevel).mockImplementation((name) => (name === 'Smart Factories' ? 3 : 1))
 
       testScheduler.run(({ cold, expectObservable }) => {
-        stateManagerMock.state$.mockReturnValue(cold<CorpStateName>('(a|)', { a: 'START' }))
-        expectObservable(getSut().upgradeLevels$()).toBe('(a|)', {
+        stateManagerMock.state$.mockReturnValue(cold<CorpStateName>('(a)', { a: 'START' }))
+        expectObservable(getSut().upgradeLevels$()).toBe('(a)', {
           a: { 'Smart Factories': 3, 'Smart Storage': 1 },
         })
       })
@@ -188,8 +188,8 @@ describe('Corporation', () => {
         .mockImplementation((_, research) => research === 'Hi-Tech R&D Laboratory')
 
       testScheduler.run(({ cold, expectObservable }) => {
-        stateManagerMock.state$.mockReturnValue(cold<CorpStateName>('(a|)', { a: 'START' }))
-        expectObservable(getSut().hasResearched$()).toBe('(a|)', {
+        stateManagerMock.state$.mockReturnValue(cold<CorpStateName>('(a)', { a: 'START' }))
+        expectObservable(getSut().hasResearched$()).toBe('(a)', {
           a: {
             'AgriCorp|Hi-Tech R&D Laboratory': true,
             'AgriCorp|AutoBrew': false,
@@ -204,7 +204,7 @@ describe('Corporation', () => {
       jest.mocked(mockNs.corporation.getUpgradeLevel).mockReturnValue(7)
 
       testScheduler.run(({ cold, expectObservable }) => {
-        stateManagerMock.state$.mockReturnValue(cold<CorpStateName>('(a|)', { a: 'START' }))
+        stateManagerMock.state$.mockReturnValue(cold<CorpStateName>('(a)', { a: 'START' }))
         expectObservable(getSut().upgradeLevelFor$('Smart Factories' as CorpUpgradeName)).toBe('(a|)', { a: 7 })
       })
     })
@@ -216,7 +216,7 @@ describe('Corporation', () => {
       jest.mocked(mockNs.corporation.hasResearched).mockReturnValue(true)
 
       testScheduler.run(({ cold, expectObservable }) => {
-        stateManagerMock.state$.mockReturnValue(cold<CorpStateName>('(a|)', { a: 'START' }))
+        stateManagerMock.state$.mockReturnValue(cold<CorpStateName>('(a)', { a: 'START' }))
         expectObservable(getSut().hasResearchedFor$('AgriCorp', 'Hi-Tech R&D Laboratory' as CorpResearchName)).toBe(
           '(a|)',
           { a: true },
@@ -229,7 +229,7 @@ describe('Corporation', () => {
       jest.mocked(mockNs.corporation.hasResearched).mockReturnValue(false)
 
       testScheduler.run(({ cold, expectObservable }) => {
-        stateManagerMock.state$.mockReturnValue(cold<CorpStateName>('(a|)', { a: 'START' }))
+        stateManagerMock.state$.mockReturnValue(cold<CorpStateName>('(a)', { a: 'START' }))
         expectObservable(getSut().hasResearchedFor$('AgriCorp', 'Hi-Tech R&D Laboratory' as CorpResearchName)).toBe(
           '(a|)',
           { a: false },
@@ -243,8 +243,8 @@ describe('Corporation', () => {
       jest.mocked(mockNs.corporation.getCorporation).mockReturnValue(makeCorporationInfo({ prevState: 'PURCHASE' }))
 
       testScheduler.run(({ cold, expectObservable }) => {
-        stateManagerMock.state$.mockReturnValue(cold<CorpStateName>('(a|)', { a: 'START' }))
-        expectObservable(getSut().previousStateOf$('PURCHASE')).toBe('(a|)', { a: true })
+        stateManagerMock.state$.mockReturnValue(cold<CorpStateName>('(a)', { a: 'START' }))
+        expectObservable(getSut().previousStateOf$('PURCHASE')).toBe('(a)', { a: true })
       })
     })
 
