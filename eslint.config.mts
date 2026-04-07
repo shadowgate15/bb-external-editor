@@ -19,7 +19,7 @@ export default defineConfig([
     },
   },
   {
-    ignores: ['build/**', 'node_modules/**', './NetscriptDefinitions.d.ts'],
+    ignores: ['build/**', 'node_modules/**', './NetscriptDefinitions.d.ts', 'mirror/**'],
   },
   {
     files: ['**/*.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
@@ -77,6 +77,8 @@ export default defineConfig([
           allowInterfaces: 'always',
         },
       ],
+
+      '@tanstack/query/exhaustive-deps': ['warn'],
     },
   },
 ])

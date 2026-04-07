@@ -1,3 +1,5 @@
+/* eslint-disable no-undef */
+/* eslint-disable @typescript-eslint/no-require-imports */
 // jest.config.js
 const { createDefaultPreset, pathsToModuleNameMapper } = require('ts-jest')
 

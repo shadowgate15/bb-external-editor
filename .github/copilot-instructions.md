@@ -79,7 +79,7 @@ await ch.listen() // blocks until ch.close() or ns.atExit
 
 Encodes structured meaning into Bitburner port integers using a fixed digit layout:
 
-```
+```text
 [satyr:1][nymph:2][muse:2][hero:2][titan:2][ip:5]
 ```
 
