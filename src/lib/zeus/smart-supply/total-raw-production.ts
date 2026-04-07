@@ -15,8 +15,34 @@ import { Warehouses } from '../warehouses'
 import { calculateRawProduction } from './calculate-raw-production'
 import { getLimitedRawProduction } from './get-limited-raw-production'
 
+/**
+ * Computes per-city raw and warehouse-limited production rates for every division.
+ *
+ * Two observables are provided:
+ * - `rawProduction$` — unconstrained production rate, based on office staffing, upgrades, and research.
+ * - `totalRawProduction$` — production rate capped by available warehouse space.
+ *
+ * Both observables emit an ever-growing `Record<string, number>` keyed by
+ * `delimited(divisionName, cityName)`. They grow as new division/city pairs are
+ * observed from `eachDivisionNameAndCityName$` and update whenever any upstream
+ * value changes.
+ *
+ * `rawProduction$` is eagerly subscribed in the constructor so its `shareReplay(1)`
+ * cache is warm before `totalRawProduction$` first tries to read from it.
+ */
 @injectable('Singleton')
 export class TotalRawProduction {
+  /**
+   * Accumulated map of unconstrained raw production rates, keyed by
+   * `delimited(divisionName, cityName)`.
+   *
+   * The value for each key is the theoretical output per cycle — calculated from
+   * office employee production stats, Smart Factories upgrade level, and applicable
+   * assembly researches — without accounting for available warehouse space.
+   *
+   * Emits a new accumulated snapshot whenever any upstream value changes for any
+   * division/city pair. Never completes.
+   */
   readonly rawProduction$: Observable<Record<string, number>> = this.divisions.eachDivisionNameAndCityName$().pipe(
     mergeMap(({ divisionName, cityName }) =>
       combineLatest({
@@ -65,6 +91,17 @@ export class TotalRawProduction {
     shareReplay(1),
   )
 
+  /**
+   * Accumulated map of warehouse-limited production rates, keyed by
+   * `delimited(divisionName, cityName)`.
+   *
+   * Extends `rawProduction$` by capping each city's output to what will physically
+   * fit in its warehouse during the current cycle, factoring in the unit size of
+   * each produced material or product and the warehouse's current free space.
+   *
+   * Emits a new accumulated snapshot whenever any upstream value changes for any
+   * division/city pair. Never completes.
+   */
   readonly totalRawProduction$: Observable<Record<string, number>> = this.divisions.eachDivisionNameAndCityName$().pipe(
     mergeMap(({ divisionName, cityName }) =>
       combineLatest({
@@ -136,6 +173,8 @@ export class TotalRawProduction {
     @inject(Warehouses)
     private readonly warehouses: Warehouses,
   ) {
+    // Eagerly start rawProduction$ so shareReplay(1) cache is populated
+    // before totalRawProduction$ looks up values from it.
     this.rawProduction$.subscribe()
   }
 }
