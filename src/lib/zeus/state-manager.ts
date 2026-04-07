@@ -31,7 +31,7 @@ export class StateManager {
     private readonly ns: NS,
   ) {
     this.state$().subscribe({
-      next: (state) => this.ns.print(`Corporation state: ${state}`),
+      // next: (state) => this.ns.print(`Corporation state: ${state}`),
     })
   }
 

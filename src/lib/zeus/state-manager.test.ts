@@ -45,17 +45,6 @@ describe('StateManager', () => {
       expect(await result).toBe('START')
     })
 
-    test('should log each state emission via ns.print', async () => {
-      triggerUpdate('PURCHASE')
-      await tick()
-      triggerUpdate('PRODUCTION')
-      await tick()
-
-      expect(mockNs.print).toHaveBeenCalledWith('Corporation state: PURCHASE')
-      expect(mockNs.print).toHaveBeenCalledWith('Corporation state: PRODUCTION')
-      expect(mockNs.print).toHaveBeenCalledTimes(2)
-    })
-
     test('should return the same observable instance on every call', () => {
       expect(sut.state$()).toBe(sut.state$())
     })
