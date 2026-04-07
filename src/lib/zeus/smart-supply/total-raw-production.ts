@@ -1,7 +1,7 @@
 import 'reflect-metadata'
 
 import { inject, injectable } from 'inversify'
-import { combineLatest, last, map, mergeMap, Observable, of, reduce, shareReplay, single } from 'rxjs'
+import { combineLatest, first, last, map, mergeMap, Observable, of, scan, shareReplay, single } from 'rxjs'
 
 import { NSIdentifier } from '@/lib/ns.identifier'
 
@@ -55,9 +55,12 @@ export class TotalRawProduction {
         }),
       }),
     ),
-    reduce(
-      (acc, { divisionName, cityName, rawProduction }) => ({ ...acc, [divisionName + '-' + cityName]: rawProduction }),
-      {},
+    scan(
+      (acc, { divisionName, cityName, rawProduction }) => ({
+        ...acc,
+        [delimited(divisionName, cityName)]: rawProduction,
+      }),
+      {} as Record<string, number>,
     ),
     shareReplay(1),
   )
@@ -69,7 +72,7 @@ export class TotalRawProduction {
         cityName: of(cityName),
         rawProduction: this.rawProduction$.pipe(
           map((rawProduction) => rawProduction[delimited(divisionName, cityName)]),
-          single(),
+          first((v) => v !== undefined),
         ),
       }).pipe(last(), single()),
     ),
@@ -101,12 +104,12 @@ export class TotalRawProduction {
         products,
       }),
     })),
-    reduce(
+    scan(
       (acc, { division, cityName, totalRawProduction }) => ({
         ...acc,
         [delimited(division.name, cityName)]: totalRawProduction,
       }),
-      {},
+      {} as Record<string, number>,
     ),
     shareReplay(1),
   )
@@ -132,5 +135,7 @@ export class TotalRawProduction {
 
     @inject(Warehouses)
     private readonly warehouses: Warehouses,
-  ) {}
+  ) {
+    this.rawProduction$.subscribe()
+  }
 }

@@ -189,7 +189,9 @@ describe('Divisions', () => {
 
       testScheduler.run(({ cold }) => {
         corporationMock.divisionNames$.mockReturnValue(cold('a', { a: [] }))
-        getSut().eachDivisionNameAndCityName$().subscribe((v) => emissions.push(v))
+        getSut()
+          .eachDivisionNameAndCityName$()
+          .subscribe((v) => emissions.push(v))
       })
 
       expect(emissions).toHaveLength(0)
@@ -201,7 +203,9 @@ describe('Divisions', () => {
 
       testScheduler.run(({ cold }) => {
         corporationMock.divisionNames$.mockReturnValue(cold('a', { a: ['AgriCorp'] }))
-        getSut().eachDivisionNameAndCityName$().subscribe((v) => emissions.push(v))
+        getSut()
+          .eachDivisionNameAndCityName$()
+          .subscribe((v) => emissions.push(v))
       })
 
       expect(emissions).toHaveLength(0)
@@ -266,7 +270,9 @@ describe('Divisions', () => {
 
       testScheduler.run(({ cold }) => {
         corporationMock.divisionNames$.mockReturnValue(cold('a', { a: ['AgriCorp'] }))
-        getSut().divisionCityProducts$().subscribe((v) => emissions.push(v))
+        getSut()
+          .divisionCityProducts$()
+          .subscribe((v) => emissions.push(v))
       })
 
       expect(emissions.at(-1)).toEqual({
@@ -325,7 +331,9 @@ describe('Divisions', () => {
 
       testScheduler.run(({ cold }) => {
         corporationMock.divisionNames$.mockReturnValue(cold('a', { a: ['AgriCorp'] }))
-        getSut().divisionCityMaterials$().subscribe((v) => emissions.push(v))
+        getSut()
+          .divisionCityMaterials$()
+          .subscribe((v) => emissions.push(v))
       })
 
       expect(emissions.at(-1)).toEqual({
@@ -363,7 +371,9 @@ describe('Divisions', () => {
 
       testScheduler.run(({ cold }) => {
         corporationMock.divisionNames$.mockReturnValue(cold('a', { a: ['AgriCorp'] }))
-        getSut().divisionFor$('NonExistent').subscribe((v) => emissions.push(v))
+        getSut()
+          .divisionFor$('NonExistent')
+          .subscribe((v) => emissions.push(v))
       })
 
       expect(emissions).toHaveLength(0)

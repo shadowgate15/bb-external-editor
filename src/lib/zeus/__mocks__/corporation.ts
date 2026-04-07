@@ -72,9 +72,7 @@ export function createCorporationMock(): CorporationMock {
   return {
     info$: jest.fn<Observable<CorporationInfo>, []>().mockReturnValue(subjects.info.asObservable()),
     nextState$: jest.fn<Observable<CorpStateName>, []>().mockReturnValue(subjects.nextState.asObservable()),
-    previousState$: jest
-      .fn<Observable<CorpStateName>, []>()
-      .mockReturnValue(subjects.previousState.asObservable()),
+    previousState$: jest.fn<Observable<CorpStateName>, []>().mockReturnValue(subjects.previousState.asObservable()),
     divisionNames$: jest.fn<Observable<string[]>, []>().mockReturnValue(subjects.divisionNames.asObservable()),
     upgradeLevels$: jest
       .fn<Observable<Record<CorpUpgradeName, number>>, []>()
