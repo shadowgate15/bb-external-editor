@@ -2,7 +2,20 @@ import 'reflect-metadata'
 
 import { CityName, Division, Material, Product } from '@ns'
 import { inject, injectable } from 'inversify'
-import { filter, from, map, mergeMap, Observable, reduce, shareReplay, single, switchMap, toArray } from 'rxjs'
+import {
+  filter,
+  first,
+  from,
+  map,
+  mergeMap,
+  Observable,
+  reduce,
+  scan,
+  shareReplay,
+  single,
+  switchMap,
+  toArray,
+} from 'rxjs'
 
 import { NSIdentifier } from '../ns.identifier'
 import { Corporation } from './corporation'
@@ -11,28 +24,41 @@ import { delimited } from './delimited'
 @injectable('Singleton')
 export class Divisions {
   readonly _info$: Observable<Record<string, Division>> = this.corporation.divisionNames$().pipe(
-    switchMap((divisionNames) => from(divisionNames)),
-    map((divisionName) => this.ns.corporation.getDivision(divisionName)),
-    reduce((acc, division) => ({ ...acc, [division.name]: division }), {}),
+    switchMap((divisionNames) =>
+      from(divisionNames).pipe(
+        map((divisionName) => this.ns.corporation.getDivision(divisionName)),
+        reduce((acc, division) => ({ ...acc, [division.name]: division }), {}),
+      ),
+    ),
     shareReplay(1),
   )
 
   /** key: division name, value: city names */
   readonly _divisionCity$: Observable<Record<string, CityName[]>> = this._info$.pipe(
-    switchMap((divisions) => from(Object.values(divisions))),
-    reduce((acc, division) => ({ ...acc, [division.name]: division.cities }), {}),
+    map((divisions) =>
+      Object.values(divisions).reduce(
+        (acc, division) => ({
+          ...acc,
+          [division.name]: division.cities,
+        }),
+        {} as Record<string, CityName[]>,
+      ),
+    ),
     shareReplay(1),
   )
 
   readonly _eachDivisionNameAndCityName$: Observable<{ divisionName: string; cityName: CityName }> =
     this._divisionCity$.pipe(
-      switchMap((divisionCity) => from(Object.entries(divisionCity))),
-      mergeMap(([divisionName, cityNames]) =>
-        from(cityNames).pipe(
-          map((cityName) => ({
-            divisionName,
-            cityName,
-          })),
+      switchMap((divisionCity) =>
+        from(Object.entries(divisionCity)).pipe(
+          mergeMap(([divisionName, cityNames]) =>
+            from(cityNames).pipe(
+              map((cityName) => ({
+                divisionName,
+                cityName,
+              })),
+            ),
+          ),
         ),
       ),
     )
@@ -45,19 +71,18 @@ export class Divisions {
           from(division.products).pipe(
             map((productName) => this.ns.corporation.getProduct(division.name, cityName, productName)),
             toArray(),
+            map((products) => ({
+              divisionName,
+              cityName,
+              products,
+            })),
           ),
         ),
-        single(),
-        map((products) => ({
-          divisionName,
-          cityName,
-          products,
-        })),
       ),
     ),
-    reduce(
+    scan(
       (acc, { divisionName, cityName, products }) => ({ ...acc, [delimited(divisionName, cityName)]: products }),
-      {},
+      {} as Record<string, Product[]>,
     ),
     shareReplay(1),
   )
@@ -76,7 +101,7 @@ export class Divisions {
         })),
       ),
     ),
-    reduce(
+    scan(
       (acc, { divisionName, cityName, materials }) => ({ ...acc, [delimited(divisionName, cityName)]: materials }),
       {},
     ),
@@ -113,23 +138,24 @@ export class Divisions {
 
   divisionFor$(divisionName: string): Observable<Division> {
     return this._info$.pipe(
-      mergeMap((divisions) => from(Object.values(divisions))),
-      filter((division) => division.name === divisionName),
-      single(),
+      mergeMap((divisions) =>
+        from(Object.values(divisions)).pipe(filter((division) => division.name === divisionName)),
+      ),
+      first(),
     )
   }
 
   divisionCityProductsFor$(divisionName: string, cityName: CityName): Observable<Product[]> {
     return this._divisionCityProducts$.pipe(
       map((divisionCityProducts) => divisionCityProducts[delimited(divisionName, cityName)]),
-      single(),
+      first((products) => products !== undefined),
     )
   }
 
   divisionCityMaterialsFor$(divisionName: string, cityName: CityName): Observable<Material[]> {
     return this._divisionCityMaterials$.pipe(
       map((divisionCityMaterials) => divisionCityMaterials[delimited(divisionName, cityName)]),
-      single(),
+      first((materials) => materials !== undefined),
     )
   }
 }
