@@ -2,7 +2,7 @@ import 'reflect-metadata'
 
 import { Warehouse } from '@ns'
 import { inject, injectable } from 'inversify'
-import { map, Observable, reduce, shareReplay, single } from 'rxjs'
+import { first, map, Observable, scan, shareReplay } from 'rxjs'
 
 import { NSIdentifier } from '../ns.identifier'
 import { delimited } from './delimited'
@@ -10,13 +10,13 @@ import { Divisions } from './divisions'
 
 @injectable('Singleton')
 export class Warehouses {
-  readonly info$: Observable<Record<string, Warehouse>> = this.divisions.eachDivisionNameAndCityName$().pipe(
+  readonly _info$: Observable<Record<string, Warehouse>> = this.divisions.eachDivisionNameAndCityName$().pipe(
     map(({ divisionName, cityName }) => ({
       divisionName,
       cityName,
       warehouse: this.ns.corporation.getWarehouse(divisionName, cityName),
     })),
-    reduce(
+    scan(
       (acc, { divisionName, cityName, warehouse }) => ({ ...acc, [delimited(divisionName, cityName)]: warehouse }),
       {},
     ),
@@ -31,10 +31,14 @@ export class Warehouses {
     private readonly divisions: Divisions,
   ) {}
 
+  info$() {
+    return this._info$
+  }
+
   warehouseFor$(divisionName: string, cityName: string): Observable<Warehouse> {
-    return this.info$.pipe(
+    return this._info$.pipe(
       map((warehouses) => warehouses[delimited(divisionName, cityName)]),
-      single(),
+      first((warehouse) => warehouse !== undefined),
     )
   }
 }
