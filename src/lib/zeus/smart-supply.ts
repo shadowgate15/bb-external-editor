@@ -163,7 +163,9 @@ export class SmartSupply {
         const freeSpace = warehouse.size - warehouse.sizeUsed
 
         // --- Congestion detection ---
+        const prevCongestionCount = this._congestionData.get(key) ?? 0
         const isCongested = this._checkCongestion(divisionName, cityName, division, industryData, key)
+        const wasCongested = prevCongestionCount > CONGESTION_THRESHOLD
 
         if (isCongested) {
           this.ns.print(`WARN Smart Supply: warehouse congested at ${divisionName}/${cityName} — discarding inputs`)
@@ -172,6 +174,14 @@ export class SmartSupply {
             this.ns.corporation.sellMaterial(divisionName, cityName, name, 'MAX', '0')
           }
           return
+        }
+
+        // Reset sell orders if we just exited congestion so inputs are no longer discarded
+        if (wasCongested) {
+          this.ns.print(`INFO Smart Supply: congestion cleared at ${divisionName}/${cityName} — resetting sell orders`)
+          for (const [name] of inputEntries) {
+            this.ns.corporation.sellMaterial(divisionName, cityName, name, '0', 'MP')
+          }
         }
 
         // --- Normal purchasing ---

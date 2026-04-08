@@ -294,6 +294,52 @@ describe('SmartSupply', () => {
       expect(mockNs.corporation.sellMaterial).toHaveBeenCalledWith(DIVISION_NAME, CITY, 'Chemicals', 'MAX', '0')
     })
 
+    test('should reset sell orders when congestion clears', () => {
+      const division = makeDivision()
+      const warehouse = makeWarehouse()
+      const key = `${DIVISION_NAME}|${CITY}`
+
+      // First 6 cycles: zero production → enter congestion; 7th cycle: production resumes
+      let plantsCallCount = 0
+      jest.mocked(mockNs.corporation.getMaterial).mockImplementation((_div, _city, name) => {
+        if (name === 'Plants') {
+          plantsCallCount++
+          // Return productive on the 7th check (after 6 congested cycles)
+          return makeMaterial({ productionAmount: plantsCallCount > 6 ? 10 : 0, stored: 0 })
+        }
+        return makeMaterial({ productionAmount: 0, stored: 0 })
+      })
+
+      divisionsMock.divisionFor$.mockReturnValue(of(division))
+      warehousesMock.warehouseFor$.mockReturnValue(of(warehouse))
+      industryDataMock.data$.mockReturnValue(of(INDUSTRY_DATA))
+      materialDataMock.data$.mockReturnValue(of(MATERIAL_DATA))
+      totalRawProductionMock.totalRawProduction$ = of({ [key]: 1000 })
+
+      testScheduler.run(({ cold }) => {
+        corporationMock.nextState$.mockReturnValue(
+          cold('abcdefg', {
+            a: 'PURCHASE' as CorpStateName,
+            b: 'PURCHASE' as CorpStateName,
+            c: 'PURCHASE' as CorpStateName,
+            d: 'PURCHASE' as CorpStateName,
+            e: 'PURCHASE' as CorpStateName,
+            f: 'PURCHASE' as CorpStateName,
+            g: 'PURCHASE' as CorpStateName,
+          }),
+        )
+        divisionsMock.eachDivisionNameAndCityName$.mockReturnValue(
+          cold('a', { a: { divisionName: DIVISION_NAME, cityName: CITY } }),
+        )
+
+        getSut().purchaseMaterials$.subscribe()
+      })
+
+      // On the 7th cycle (first recovery), sell orders should be reset to stop discarding
+      expect(mockNs.corporation.sellMaterial).toHaveBeenCalledWith(DIVISION_NAME, CITY, 'Water', '0', 'MP')
+      expect(mockNs.corporation.sellMaterial).toHaveBeenCalledWith(DIVISION_NAME, CITY, 'Chemicals', '0', 'MP')
+    })
+
     test('should reset congestion counter when production resumes', () => {
       const division = makeDivision()
       const warehouse = makeWarehouse()
