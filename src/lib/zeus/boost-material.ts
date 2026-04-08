@@ -13,7 +13,7 @@ import { MaterialData } from './material-data'
 import { Warehouses } from './warehouses'
 
 /** The four boost materials and their corresponding `CorpIndustryData` factor field names. */
-const BOOST_MATERIAL_FACTORS: Readonly<Record<string, CorpMaterialName>> = {
+export const BOOST_MATERIAL_FACTORS: Readonly<Record<string, CorpMaterialName>> = {
   realEstateFactor: 'Real Estate',
   hardwareFactor: 'Hardware',
   robotFactor: 'Robots',

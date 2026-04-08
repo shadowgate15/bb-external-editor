@@ -10,6 +10,7 @@ import { NSIdentifier } from '@/lib/ns.identifier'
 import { PortNumberBuilder } from '@/lib/port-number'
 
 import { Config } from '../config'
+import { Divisions } from '../divisions'
 import {
   ClientMethodMap,
   Response,
@@ -59,6 +60,9 @@ export class CorporationDaemonServer {
 
     @inject(Config)
     protected readonly config: Config,
+
+    @inject(Divisions)
+    protected readonly divisions: Divisions,
   ) {
     this.port = PortNumberBuilder.fromServer(this.ns, 'home').corporation().daemon().build()
 
@@ -126,6 +130,10 @@ export class CorporationDaemonServer {
       const client = new NSChannelClient<ClientMethodMap>(this.ns, returnPort)
 
       client.send('zeusConfig', { id, config: await firstValueFrom(this.config.data$()) })
+    })
+
+    this.server.addMethod('clearBoostMaterials', () => {
+      this.divisions.clearBoostMaterials()
     })
   }
 

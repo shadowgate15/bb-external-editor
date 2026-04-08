@@ -18,6 +18,7 @@ import {
 } from 'rxjs'
 
 import { NSIdentifier } from '../ns.identifier'
+import { BOOST_MATERIAL_FACTORS } from './boost-material'
 import { Corporation } from './corporation'
 import { delimited } from './delimited'
 
@@ -220,5 +221,44 @@ export class Divisions {
       map((divisionCityMaterials) => divisionCityMaterials[delimited(divisionName, cityName)]),
       first((materials) => materials !== undefined),
     )
+  }
+
+  clearBoostMaterials() {
+    this._divisionCity$
+      .pipe(
+        first(),
+        switchMap((divisionCity) =>
+          from(Object.entries(divisionCity)).pipe(
+            mergeMap(([divisionName, cityNames]) =>
+              from(cityNames).pipe(
+                map((cityName) => ({
+                  divisionName,
+                  cityName,
+                })),
+              ),
+            ),
+          ),
+        ),
+      )
+      .subscribe(({ divisionName, cityName }) => {
+        this.corporation
+          .nextState$()
+          .pipe(first((state) => state === 'PURCHASE'))
+          .subscribe(() => {
+            for (const boostMaterial of Object.values(BOOST_MATERIAL_FACTORS)) {
+              this.ns.corporation.buyMaterial(divisionName, cityName, boostMaterial, 0)
+              this.ns.corporation.sellMaterial(divisionName, cityName, boostMaterial, 'MAX', '0')
+            }
+
+            this.corporation
+              .previousState$()
+              .pipe(first((state) => state === 'PURCHASE'))
+              .subscribe(() => {
+                for (const boostMaterial of Object.values(BOOST_MATERIAL_FACTORS)) {
+                  this.ns.corporation.sellMaterial(divisionName, cityName, boostMaterial, '0', '0')
+                }
+              })
+          })
+      })
   }
 }
