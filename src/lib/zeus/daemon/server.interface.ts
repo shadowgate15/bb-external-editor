@@ -93,4 +93,5 @@ export type ErrorResponseWithKind<Kind extends ServerResponseKind> = Extract<Err
 
 export type ServerMethodMap = {
   response: (response: Response) => void
+  configUpdated: () => void
 }

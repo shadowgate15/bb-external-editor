@@ -1,39 +1,41 @@
 import 'reflect-metadata'
 
 import { inject, injectable } from 'inversify'
+import { Observable, Subject } from 'rxjs'
 import z from 'zod'
 
 import { NSIdentifier } from '../ns.identifier'
 
-const CONFIG_PATH = 'config.json'
+export const CONFIG_PATH = 'config.json'
 
-const configSchema = z.object({
+export const configSchema = z.object({
   enableBoostMaterials: z.boolean().default(false),
 })
-type ConfigData = z.infer<typeof configSchema>
+export type ConfigData = z.infer<typeof configSchema>
 
 @injectable('Singleton')
 export class Config {
-  private _data: ConfigData
+  private data$$ = new Subject<ConfigData>()
 
   constructor(
     @inject(NSIdentifier)
     private readonly ns: NS,
   ) {
-    this._readConfig()
+    this.read()
   }
 
-  private _readConfig() {
+  /** @returns Observable of the latest parsed config, re-emitted on each {@link read} call. */
+  data$(): Observable<ConfigData> {
+    return this.data$$
+  }
+
+  read() {
     const contents = this.ns.read(CONFIG_PATH)
 
     if (contents === '') {
-      this._data = configSchema.parse({})
+      this.data$$.next(configSchema.parse({}))
     } else {
-      this._data = configSchema.parse(JSON.parse(contents))
+      this.data$$.next(configSchema.parse(JSON.parse(contents)))
     }
-  }
-
-  isBoostMaterialsEnabled() {
-    return this._data.enableBoostMaterials
   }
 }

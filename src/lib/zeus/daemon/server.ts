@@ -8,6 +8,7 @@ import { concatMap, first, map, Observable, OperatorFunction, Subject, Subscribe
 import { NSIdentifier } from '@/lib/ns.identifier'
 import { PortNumberBuilder } from '@/lib/port-number'
 
+import { Config } from '../config'
 import {
   Response,
   ServerMethodMap,
@@ -53,6 +54,9 @@ export class CorporationDaemonServer {
   constructor(
     @inject(NSIdentifier)
     protected readonly ns: NS,
+
+    @inject(Config)
+    protected readonly config: Config,
   ) {
     this.port = PortNumberBuilder.fromServer(this.ns, 'home').corporation().daemon().build()
 
@@ -106,6 +110,10 @@ export class CorporationDaemonServer {
   private setupMethods() {
     this.server.addMethod('response', (response) => {
       this.responses$$.next(response)
+    })
+
+    this.server.addMethod('configUpdated', () => {
+      this.config.read()
     })
   }
 
