@@ -4,6 +4,7 @@ import { inject, injectable } from 'inversify'
 import { ignoreElements } from 'rxjs'
 
 import { NSIdentifier } from '../ns.identifier'
+import { BoostMaterial } from './boost-material'
 import { CorporationDaemonServer } from './daemon/server'
 import { Seller } from './seller'
 import { SmartSupply } from './smart-supply'
@@ -26,6 +27,9 @@ export class App {
 
     @inject(SmartSupply)
     private readonly smartSupply: SmartSupply,
+
+    @inject(BoostMaterial)
+    private readonly boostMaterial: BoostMaterial,
   ) {
     this.ns.atExit(() => {
       this.server.close()
@@ -35,6 +39,7 @@ export class App {
   async run() {
     this.seller.start()
     this.smartSupply.start()
+    this.boostMaterial.start()
 
     return new Promise<void>((resolve, reject) => {
       this.stateManager.state$().pipe(ignoreElements()).subscribe({
