@@ -86,7 +86,7 @@ function makeMaterial(overrides: Partial<Material> = {}): Material {
     competition: undefined,
     buyAmount: 0,
     actualSellAmount: 0,
-    productionAmount: 0,
+    productionAmount: 1,
     importAmount: 0,
     marketPrice: 50,
     desiredSellPrice: 'MP',

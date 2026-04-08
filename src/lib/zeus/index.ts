@@ -8,8 +8,8 @@ import { IndustryData } from './industry-data'
 import { MaterialData } from './material-data'
 import { Offices } from './offices'
 import { Seller } from './seller'
-import { SmartSupply } from './smart-supply'
-import { TotalRawProduction } from './smart-supply/total-raw-production'
+import { SmartSupplyV2 } from './smart-supply-v2'
+import { TotalRawProduction } from './smart-supply-v2/total-raw-production'
 import { StateManager } from './state-manager'
 import { Warehouses } from './warehouses'
 
@@ -17,7 +17,7 @@ export const zeusModule = new ContainerModule((options) => {
   options.bind(App).toSelf()
   options.bind(CorporationDaemonServer).toSelf()
   options.bind(StateManager).toSelf()
-  options.bind(SmartSupply).toSelf()
+  options.bind(SmartSupplyV2).toSelf()
   options.bind(Seller).toSelf()
   options.bind(Corporation).toSelf()
   options.bind(Divisions).toSelf()
