@@ -6,7 +6,7 @@ import { ignoreElements } from 'rxjs'
 import { NSIdentifier } from '../ns.identifier'
 import { CorporationDaemonServer } from './daemon/server'
 import { Seller } from './seller'
-import { SmartSupplyV2 } from './smart-supply-v2'
+import { SmartSupply } from './smart-supply'
 import { StateManager } from './state-manager'
 
 @injectable('Singleton')
@@ -21,11 +21,11 @@ export class App {
     @inject(StateManager)
     private readonly stateManager: StateManager,
 
-    @inject(SmartSupplyV2)
-    private readonly smartSupply: SmartSupplyV2,
-
     @inject(Seller)
     private readonly seller: Seller,
+
+    @inject(SmartSupply)
+    private readonly smartSupply: SmartSupply,
   ) {
     this.ns.atExit(() => {
       this.server.close()
@@ -33,8 +33,8 @@ export class App {
   }
 
   async run() {
-    this.smartSupply.start()
     this.seller.start()
+    this.smartSupply.start()
 
     return new Promise<void>((resolve, reject) => {
       this.stateManager.state$().pipe(ignoreElements()).subscribe({
