@@ -7,7 +7,7 @@ import React from 'react'
 
 import { FitContent } from '@/lib/components/fit-content'
 import { useNetscript } from '@/lib/hooks/use-netscript'
-import { CONFIG_PATH, configSchema } from '@/lib/zeus/config'
+import { CONFIG_PATH, configSchema } from '@/lib/zeus/config.interface'
 import { createCorporationDaemonClient } from '@/lib/zeus/daemon/client'
 
 export function ZeusConfig() {

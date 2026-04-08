@@ -2,16 +2,9 @@ import 'reflect-metadata'
 
 import { inject, injectable } from 'inversify'
 import { Observable, ReplaySubject } from 'rxjs'
-import z from 'zod'
 
 import { NSIdentifier } from '../ns.identifier'
-
-export const CONFIG_PATH = 'config.json'
-
-export const configSchema = z.object({
-  enableBoostMaterials: z.boolean().default(false),
-})
-export type ConfigData = z.infer<typeof configSchema>
+import { CONFIG_PATH, ConfigData, configSchema } from './config.interface'
 
 @injectable('Singleton')
 export class Config {
@@ -37,5 +30,9 @@ export class Config {
     } else {
       this.data$$.next(configSchema.parse(JSON.parse(contents)))
     }
+  }
+
+  write(data: ConfigData) {
+    this.ns.write(CONFIG_PATH, JSON.stringify(configSchema.parse(data)))
   }
 }

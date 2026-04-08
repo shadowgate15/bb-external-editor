@@ -3,13 +3,15 @@ import 'reflect-metadata'
 import { ScriptArg } from '@ns'
 import { inject, injectable } from 'inversify'
 import { JSONRPCRequest, JSONRPCServer, TypedJSONRPCServer } from 'json-rpc-2.0'
-import { concatMap, first, map, Observable, OperatorFunction, Subject, Subscriber, tap } from 'rxjs'
+import { concatMap, first, firstValueFrom, map, Observable, OperatorFunction, Subject, Subscriber, tap } from 'rxjs'
 
+import { NSChannelClient } from '@/lib/channel'
 import { NSIdentifier } from '@/lib/ns.identifier'
 import { PortNumberBuilder } from '@/lib/port-number'
 
 import { Config } from '../config'
 import {
+  ClientMethodMap,
   Response,
   ServerMethodMap,
   ServerResponseKind,
@@ -112,8 +114,18 @@ export class CorporationDaemonServer {
       this.responses$$.next(response)
     })
 
-    this.server.addMethod('configUpdated', () => {
+    this.server.addMethod('configUpdated', (config) => {
+      if (config) {
+        this.config.write(config)
+      }
+
       this.config.read()
+    })
+
+    this.server.addMethod('getConfig', async ({ id, returnPort }) => {
+      const client = new NSChannelClient<ClientMethodMap>(this.ns, returnPort)
+
+      client.send('zeusConfig', { id, config: await firstValueFrom(this.config.data$()) })
     })
   }
 

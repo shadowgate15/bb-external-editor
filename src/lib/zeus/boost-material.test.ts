@@ -296,7 +296,7 @@ describe('BoostMaterial', () => {
       expect(calls.some(([div, city]) => div === DIVISION_NAME && city === CITY)).toBe(true)
     })
 
-    test('should not call buyMaterial when stored amount meets target', () => {
+    test('should call buyMaterial when stored amount meets target with a 0', () => {
       const division = makeDivision()
       const warehouse = makeWarehouse({ size: 1000, sizeUsed: 0 })
 
@@ -320,7 +320,9 @@ describe('BoostMaterial', () => {
         getSut().fillBoostMaterials$.subscribe()
       })
 
-      expect(mockNs.corporation.buyMaterial).not.toHaveBeenCalled()
+      expect(mockNs.corporation.buyMaterial).toHaveBeenCalledWith('AgriCorp', 'Aevum', 'Real Estate', 0)
+      expect(mockNs.corporation.buyMaterial).toHaveBeenCalledWith('AgriCorp', 'Aevum', 'Hardware', 0)
+      expect(mockNs.corporation.buyMaterial).toHaveBeenCalledWith('AgriCorp', 'Aevum', 'AI Cores', 0)
     })
 
     test('should stop purchasing when enableBoostMaterials flips to false', () => {
