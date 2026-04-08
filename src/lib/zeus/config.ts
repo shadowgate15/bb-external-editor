@@ -1,7 +1,7 @@
 import 'reflect-metadata'
 
 import { inject, injectable } from 'inversify'
-import { Observable, Subject } from 'rxjs'
+import { Observable, ReplaySubject } from 'rxjs'
 import z from 'zod'
 
 import { NSIdentifier } from '../ns.identifier'
@@ -15,7 +15,7 @@ export type ConfigData = z.infer<typeof configSchema>
 
 @injectable('Singleton')
 export class Config {
-  private data$$ = new Subject<ConfigData>()
+  private data$$ = new ReplaySubject<ConfigData>(1)
 
   constructor(
     @inject(NSIdentifier)
