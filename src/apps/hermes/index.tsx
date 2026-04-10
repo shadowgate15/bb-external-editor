@@ -22,10 +22,16 @@ export function Hermes() {
   const ns = useNetscript()
   ns.ui.setTailTitle('Hermes')
 
-  const [selectedTab, setSelectedTabe] = React.useState<keyof TabMap>('Launcher')
+  const [selectedTab, setSelectedTab] = React.useState<keyof TabMap>('Launcher')
   const tabContent = React.useMemo(() => TAB_MAP[selectedTab], [selectedTab])
 
-  const portServer = React.useMemo(() => new PortServer(ns), [ns])
+  const portServer = React.useMemo(() => {
+    const portServer = new PortServer(ns)
+
+    portServer.listen()
+
+    return portServer
+  }, [ns])
 
   return (
     <PortServerContext.Provider value={portServer}>
@@ -35,7 +41,7 @@ export function Hermes() {
             minWidth: 700,
           }}
         >
-          <Tabs centered value={selectedTab} onChange={(_, newValue) => setSelectedTabe(newValue)}>
+          <Tabs centered value={selectedTab} onChange={(_, newValue) => setSelectedTab(newValue)}>
             {TABS.map((tab) => (
               <Tab value={tab} label={tab} key={tab} />
             ))}

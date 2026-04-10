@@ -33,6 +33,6 @@ export class Config {
   }
 
   write(data: ConfigData) {
-    this.ns.write(CONFIG_PATH, JSON.stringify(configSchema.parse(data)))
+    this.ns.write(CONFIG_PATH, JSON.stringify(configSchema.parse(data)), 'w')
   }
 }

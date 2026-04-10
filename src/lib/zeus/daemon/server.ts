@@ -123,6 +123,8 @@ export class CorporationDaemonServer {
         this.config.write(config)
       }
 
+      this.ns.alert('Zeus configuration updated.')
+
       this.config.read()
     })
 

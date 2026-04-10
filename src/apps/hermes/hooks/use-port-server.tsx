@@ -23,6 +23,7 @@ export class PortServer extends NSChannelServer<MethodMap> {
     super(ns, port)
 
     this.port = port
+    console.log(`PortServer initialized on port ${this.port}`)
   }
 
   override setupMethods(): void {

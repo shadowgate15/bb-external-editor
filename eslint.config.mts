@@ -6,7 +6,6 @@ import markdown from '@eslint/markdown'
 import css from '@eslint/css'
 import { defineConfig } from 'eslint/config'
 import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended'
-import pluginQuery from '@tanstack/eslint-plugin-query'
 import simpleImportSort from 'eslint-plugin-simple-import-sort'
 import React from 'react'
 
@@ -42,8 +41,6 @@ export default defineConfig([
     files: ['**/*.{js,mjs,cjs,jsx,mjsx,ts,tsx,mtsx}'],
     ...pluginReact.configs.flat.recommended,
   },
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ...(pluginQuery.configs['flat/recommended'] as any[]),
   {
     files: ['**/*.{js,mjs,cjs,jsx,mjsx,ts,tsx,mtsx}'],
     languageOptions: {
@@ -77,8 +74,6 @@ export default defineConfig([
           allowInterfaces: 'always',
         },
       ],
-
-      '@tanstack/query/exhaustive-deps': ['warn'],
     },
   },
 ])

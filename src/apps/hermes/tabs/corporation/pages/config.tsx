@@ -4,11 +4,11 @@ import FormControl from '@mui/material/FormControl'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import Grid from '@mui/material/Grid'
 import Switch from '@mui/material/Switch'
-import { useMutation, useQuery } from '@tanstack/react-query'
 import React from 'react'
-import { combineLatest, defer, filter, first, firstValueFrom, map, of } from 'rxjs'
+import { filter, first, map } from 'rxjs'
 
 import { usePortServer } from '@/apps/hermes/hooks/use-port-server'
+import { useNetscript } from '@/lib/hooks/use-netscript'
 import { ConfigData } from '@/lib/zeus/config.interface'
 
 import { useCorpClient } from '../hooks/use-corp-client'
@@ -18,68 +18,60 @@ export interface ConfigProps {
 }
 
 export function Config({ onBack }: ConfigProps) {
+  const ns = useNetscript()
   const corpClient = useCorpClient()
   const portServer = usePortServer()
 
-  const configQuery = React.useMemo(
-    () =>
-      useQuery({
-        // eslint-disable-next-line @tanstack/query/exhaustive-deps
-        queryKey: ['corpConfig'],
-        queryFn: async () => {
-          const id = crypto.randomUUID()
+  const [config, setConfig] = React.useState<ConfigData | null>(null)
 
-          return firstValueFrom(
-            combineLatest([
-              portServer.responses$$.pipe(
-                filter((response) => response.action === 'zeusConfig'),
-                first((response) => response.data.id === id),
-              ),
-              defer(() => of(corpClient.send('getConfig', { id, returnPort: portServer.port }))),
-            ]).pipe(map(([response, _]) => response.data.config)),
-          )
-        },
-        refetchInterval: false,
-      }),
-    [portServer, corpClient],
-  )
+  const fetchConfig = React.useCallback(async () => {
+    const id = crypto.randomUUID()
 
-  const mutateConfig = React.useMemo(
-    () =>
-      useMutation({
-        mutationFn: async (newConfig: ConfigData) => {
-          corpClient.send('configUpdated', newConfig)
+    portServer.responses$$
+      .pipe(
+        filter((response) => response.action === 'zeusConfig'),
+        first((response) => response.data.id === id),
+        map((response) => response.data.config),
+      )
+      .subscribe((config) => {
+        setConfig(config)
+      })
 
-          configQuery.refetch()
-        },
-      }),
-    [corpClient, configQuery],
-  )
+    corpClient.send('getConfig', { id, returnPort: portServer.port })
+  }, [ns, corpClient, portServer, setConfig])
+
+  React.useEffect(() => {
+    fetchConfig()
+  }, [fetchConfig])
 
   return (
-    <Grid container spacing={1}>
+    <Grid container direction="column" spacing={1}>
       <Grid display="flex" size="grow" justifyContent="right">
         <Button onClick={onBack} size="small">
           Back
         </Button>
       </Grid>
       <Grid>
-        {configQuery.isLoading && <CircularProgress aria-label="Loading…" />}
-
-        {configQuery.isError && <div>Error loading config: {String(configQuery.error)}</div>}
-
-        {configQuery.isSuccess && (
+        {config === null ? (
+          <CircularProgress aria-label="Loading..." />
+        ) : (
           <FormControl variant="standard">
             <FormControlLabel
               control={
                 <Switch
-                  checked={configQuery.data.enableBoostMaterials}
-                  onChange={(_, checked) =>
-                    mutateConfig.mutate({
-                      ...configQuery.data,
+                  checked={config.enableBoostMaterials}
+                  onChange={(_, checked) => {
+                    corpClient.send('configUpdated', {
+                      ...config,
                       enableBoostMaterials: checked,
                     })
-                  }
+
+                    setConfig(null)
+
+                    setTimeout(() => {
+                      fetchConfig()
+                    }, 100)
+                  }}
                   slotProps={{ input: { 'aria-label': 'controlled' } }}
                 />
               }

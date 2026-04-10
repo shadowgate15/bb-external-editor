@@ -287,7 +287,6 @@ export class Seller {
     baseMarkup: number,
     salesBotsLevel: number,
   ): SellRecord | null {
-    console.log(`DEBUG Computing sell record for material ${material.name} in ${divisionName} / ${cityName}`)
     if (!material.marketPrice) return null
 
     const itemMultiplier = material.quality + 0.001

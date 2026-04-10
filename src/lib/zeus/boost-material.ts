@@ -185,9 +185,9 @@ export class BoostMaterial {
 
         for (const [name, targetQty] of Object.entries(targets) as [CorpMaterialName, number][]) {
           const stored = this.ns.corporation.getMaterial(divisionName, cityName, name).stored
-          const deficit = Math.max(0, Math.floor(targetQty) - stored)
+          const deficit = Math.max(0, (Math.floor(targetQty) - stored) / 10)
 
-          this.ns.print(`INFO Boost Material: buying ${deficit} ${name} for ${divisionName}/${cityName}`)
+          // this.ns.print(`INFO Boost Material: buying ${deficit} ${name} for ${divisionName}/${cityName}`)
           this.ns.corporation.buyMaterial(divisionName, cityName, name, deficit)
         }
       }),
