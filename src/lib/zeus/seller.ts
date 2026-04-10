@@ -202,7 +202,8 @@ export class Seller {
       mergeMap(({ division, office, materials, industryData, materialData, upgradeLevels }) =>
         from(materials).pipe(
           filter((material) => material.stored > 0),
-          filter((material) => material.productionAmount > 0),
+          // Only sell materials that the industry produces
+          filter((material) => (industryData[division.type].producedMaterials ?? []).includes(material.name)),
           mergeMap((material) => {
             const record = this._computeMaterialRecord(
               divisionName,
@@ -287,7 +288,6 @@ export class Seller {
     baseMarkup: number,
     salesBotsLevel: number,
   ): SellRecord | null {
-    console.log(`DEBUG Computing sell record for material ${material.name} in ${divisionName} / ${cityName}`)
     if (!material.marketPrice) return null
 
     const itemMultiplier = material.quality + 0.001

@@ -1,6 +1,8 @@
 import { ContainerModule } from 'inversify'
 
 import { App } from './app'
+import { BoostMaterial } from './boost-material'
+import { Config } from './config'
 import { Corporation } from './corporation'
 import { CorporationDaemonServer } from './daemon/server'
 import { Divisions } from './divisions'
@@ -15,6 +17,7 @@ import { Warehouses } from './warehouses'
 
 export const zeusModule = new ContainerModule((options) => {
   options.bind(App).toSelf()
+  options.bind(BoostMaterial).toSelf()
   options.bind(CorporationDaemonServer).toSelf()
   options.bind(StateManager).toSelf()
   options.bind(Seller).toSelf()
@@ -26,4 +29,5 @@ export const zeusModule = new ContainerModule((options) => {
   options.bind(MaterialData).toSelf()
   options.bind(IndustryData).toSelf()
   options.bind(Warehouses).toSelf()
+  options.bind(Config).toSelf()
 })

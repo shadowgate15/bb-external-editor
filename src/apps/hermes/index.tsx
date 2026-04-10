@@ -6,10 +6,13 @@ import React from 'react'
 import { FitContent } from '@/lib/components/fit-content'
 import { useNetscript } from '@/lib/hooks/use-netscript'
 
+import { PortServer, PortServerContext } from './hooks/use-port-server'
+import { Corporation } from './tabs/corporation'
 import { Launcher } from './tabs/launcher'
 
 const TAB_MAP = {
   Launcher: <Launcher />,
+  Corporation: <Corporation />,
 }
 type TabMap = typeof TAB_MAP
 
@@ -19,24 +22,34 @@ export function Hermes() {
   const ns = useNetscript()
   ns.ui.setTailTitle('Hermes')
 
-  const [selectedTab, setSelectedTabe] = React.useState<keyof TabMap>('Launcher')
+  const [selectedTab, setSelectedTab] = React.useState<keyof TabMap>('Launcher')
   const tabContent = React.useMemo(() => TAB_MAP[selectedTab], [selectedTab])
 
-  return (
-    <FitContent>
-      <Box
-        sx={{
-          minWidth: 700,
-        }}
-      >
-        <Tabs centered value={selectedTab} onChange={(_, newValue) => setSelectedTabe(newValue)}>
-          {TABS.map((tab) => (
-            <Tab value={tab} label={tab} key={tab} />
-          ))}
-        </Tabs>
+  const portServer = React.useMemo(() => {
+    const portServer = new PortServer(ns)
 
-        <Box>{tabContent}</Box>
-      </Box>
-    </FitContent>
+    portServer.listen()
+
+    return portServer
+  }, [ns])
+
+  return (
+    <PortServerContext.Provider value={portServer}>
+      <FitContent>
+        <Box
+          sx={{
+            minWidth: 700,
+          }}
+        >
+          <Tabs centered value={selectedTab} onChange={(_, newValue) => setSelectedTab(newValue)}>
+            {TABS.map((tab) => (
+              <Tab value={tab} label={tab} key={tab} />
+            ))}
+          </Tabs>
+
+          <Box>{tabContent}</Box>
+        </Box>
+      </FitContent>
+    </PortServerContext.Provider>
   )
 }

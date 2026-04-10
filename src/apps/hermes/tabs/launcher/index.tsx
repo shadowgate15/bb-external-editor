@@ -4,6 +4,7 @@ import React from 'react'
 
 import { PurchaseServersButton } from './components/purchase-servers-button'
 import { UpgradeServersButton } from './components/upgrade-servers-button'
+import { ZeusdConfigButton } from './components/zeusd-config-button'
 
 export function Launcher() {
   return (
@@ -19,6 +20,9 @@ export function Launcher() {
 
         <Grid>
           <UpgradeServersButton />
+        </Grid>
+        <Grid>
+          <ZeusdConfigButton />
         </Grid>
       </Grid>
     </Box>

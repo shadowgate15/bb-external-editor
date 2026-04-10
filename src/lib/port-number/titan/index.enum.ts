@@ -4,6 +4,7 @@ import { assertTitanEnum } from '../utils'
 export enum Titan {
   Batch,
   Corporation,
+  Hermes,
 }
 
 assertTitanEnum(Titan)

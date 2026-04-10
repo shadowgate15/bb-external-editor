@@ -13,6 +13,8 @@ import {
   Warehouse,
 } from '@ns'
 
+import { ConfigData } from '../config.interface'
+
 export enum ServerResponseKind {
   GetDivisions = 'getDivisions',
   GetCorporation = 'getCorporation',
@@ -93,4 +95,11 @@ export type ErrorResponseWithKind<Kind extends ServerResponseKind> = Extract<Err
 
 export type ServerMethodMap = {
   response: (response: Response) => void
+  configUpdated: (config?: ConfigData) => void
+  getConfig: (opts: { id: string; returnPort: number }) => void
+  clearBoostMaterials: () => void
+}
+
+export type ClientMethodMap = {
+  zeusConfig: (opts: { id: string; config: ConfigData }) => void
 }

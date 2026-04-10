@@ -73,8 +73,8 @@ importers:
         specifier: ^7.5.1
         version: 7.5.1
       '@tanstack/eslint-plugin-query':
-        specifier: '5'
-        version: 5.94.5(eslint@10.0.2(jiti@2.6.1))(typescript@5.9.3)
+        specifier: '4'
+        version: 4.44.0(eslint@10.0.2(jiti@2.6.1))
       '@types/jest':
         specifier: ^30.0.0
         version: 30.0.0
@@ -894,14 +894,10 @@ packages:
   '@sinonjs/fake-timers@15.2.2':
     resolution: {integrity: sha512-KK6HfcJHaxmQNzHSsCrRzp1igwAWUXEtD64EScEUsaHw3ViNHgpFR/ACgHpesDR/YDbu6IZMzNbQkTDMlnZHGw==, tarball: https://registry.npmjs.org/@sinonjs/fake-timers/-/fake-timers-15.2.2.tgz}
 
-  '@tanstack/eslint-plugin-query@5.94.5':
-    resolution: {integrity: sha512-r3yV8xItL6YuyF3oRYL/lVudq7oONceJGy+suFoicPwUAmWqHJ1yrsXGs3WAs7MSPEqwkxcOTseUn6VzLLJmew==, tarball: https://registry.npmjs.org/@tanstack/eslint-plugin-query/-/eslint-plugin-query-5.94.5.tgz}
+  '@tanstack/eslint-plugin-query@4.44.0':
+    resolution: {integrity: sha512-lIUBcE8VeR2Wf54c5gHTVAOFbiXaSmuN4jQjN46Bhthd/2xDqF9hpCKLC0HevLffbinRtsj+amSZcgMkJ3/LLg==, tarball: https://registry.npmjs.org/@tanstack/eslint-plugin-query/-/eslint-plugin-query-4.44.0.tgz}
     peerDependencies:
-      eslint: ^8.57.0 || ^9.0.0
-      typescript: ^5.4.0
-    peerDependenciesMeta:
-      typescript:
-        optional: true
+      eslint: ^6.0.0 || ^7.0.0 || ^8.0.0
 
   '@tanstack/match-sorter-utils@8.19.4':
     resolution: {integrity: sha512-Wo1iKt2b9OT7d+YGhvEPD3DXvPv2etTusIMhMUoG7fbhmxcXCtIjJDEygy91Y2JFlwGyjqiBPRozme7UD8hoqg==, tarball: https://registry.npmjs.org/@tanstack/match-sorter-utils/-/match-sorter-utils-8.19.4.tgz}
@@ -4185,14 +4181,9 @@ snapshots:
     dependencies:
       '@sinonjs/commons': 3.0.1
 
-  '@tanstack/eslint-plugin-query@5.94.5(eslint@10.0.2(jiti@2.6.1))(typescript@5.9.3)':
+  '@tanstack/eslint-plugin-query@4.44.0(eslint@10.0.2(jiti@2.6.1))':
     dependencies:
-      '@typescript-eslint/utils': 8.56.1(eslint@10.0.2(jiti@2.6.1))(typescript@5.9.3)
       eslint: 10.0.2(jiti@2.6.1)
-    optionalDependencies:
-      typescript: 5.9.3
-    transitivePeerDependencies:
-      - supports-color
 
   '@tanstack/match-sorter-utils@8.19.4':
     dependencies:

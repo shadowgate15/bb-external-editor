@@ -3,12 +3,16 @@ import 'reflect-metadata'
 import { ScriptArg } from '@ns'
 import { inject, injectable } from 'inversify'
 import { JSONRPCRequest, JSONRPCServer, TypedJSONRPCServer } from 'json-rpc-2.0'
-import { concatMap, first, map, Observable, OperatorFunction, Subject, Subscriber, tap } from 'rxjs'
+import { concatMap, first, firstValueFrom, map, Observable, OperatorFunction, Subject, Subscriber, tap } from 'rxjs'
 
+import { NSChannelClient } from '@/lib/channel'
 import { NSIdentifier } from '@/lib/ns.identifier'
 import { PortNumberBuilder } from '@/lib/port-number'
 
+import { Config } from '../config'
+import { Divisions } from '../divisions'
 import {
+  ClientMethodMap,
   Response,
   ServerMethodMap,
   ServerResponseKind,
@@ -53,6 +57,12 @@ export class CorporationDaemonServer {
   constructor(
     @inject(NSIdentifier)
     protected readonly ns: NS,
+
+    @inject(Config)
+    protected readonly config: Config,
+
+    @inject(Divisions)
+    protected readonly divisions: Divisions,
   ) {
     this.port = PortNumberBuilder.fromServer(this.ns, 'home').corporation().daemon().build()
 
@@ -106,6 +116,26 @@ export class CorporationDaemonServer {
   private setupMethods() {
     this.server.addMethod('response', (response) => {
       this.responses$$.next(response)
+    })
+
+    this.server.addMethod('configUpdated', (config) => {
+      if (config) {
+        this.config.write(config)
+      }
+
+      this.ns.alert('Zeus configuration updated.')
+
+      this.config.read()
+    })
+
+    this.server.addMethod('getConfig', async ({ id, returnPort }) => {
+      const client = new NSChannelClient<ClientMethodMap>(this.ns, returnPort)
+
+      client.send('zeusConfig', { id, config: await firstValueFrom(this.config.data$()) })
+    })
+
+    this.server.addMethod('clearBoostMaterials', () => {
+      this.divisions.clearBoostMaterials()
     })
   }
 
