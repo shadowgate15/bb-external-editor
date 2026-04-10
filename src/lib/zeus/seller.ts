@@ -202,7 +202,8 @@ export class Seller {
       mergeMap(({ division, office, materials, industryData, materialData, upgradeLevels }) =>
         from(materials).pipe(
           filter((material) => material.stored > 0),
-          filter((material) => material.productionAmount > 0),
+          // Only sell materials that the industry produces
+          filter((material) => (industryData[division.type].producedMaterials ?? []).includes(material.name)),
           mergeMap((material) => {
             const record = this._computeMaterialRecord(
               divisionName,
