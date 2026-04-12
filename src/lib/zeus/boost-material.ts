@@ -20,8 +20,65 @@ export const BOOST_MATERIAL_FACTORS: Readonly<Record<string, CorpMaterialName>> 
   aiCoreFactor: 'AI Cores',
 } as const
 
-/** Fraction of warehouse capacity to target when filling boost materials. */
-const BOOST_FILL_RATIO = 0.5
+/**
+ * Scaling coefficient applied to stored boost material quantities in the game's production
+ * multiplier formula: `(BOOST_MATERIAL_SCALING * qty + 1) ^ factor`.
+ *
+ * Source: `Division.calculateProductionFactors()` in the Bitburner source.
+ */
+export const BOOST_MATERIAL_SCALING = 0.002
+
+/**
+ * Outer exponent applied to each city's boost multiplier when accumulating across all cities.
+ *
+ * Source: `Division.calculateProductionFactors()` in the Bitburner source.
+ */
+export const BOOST_MATERIAL_OUTER_EXPONENT = 0.73
+
+/**
+ * Compute the optimal total warehouse storage to allocate to boost materials for a given
+ * warehouse size and industry.
+ *
+ * Derived from the Bitburner production-multiplier formula:
+ * ```
+ * cityMult = Π_i (BOOST_MATERIAL_SCALING · qty_i + 1)^c_i
+ * productionMult = Σ_cities cityMult^BOOST_MATERIAL_OUTER_EXPONENT
+ * ```
+ *
+ * With Cobb-Douglas optimal distribution (see {@link computeBoostMaterialQuantities}),
+ * `productionMult` scales as `(B + Sₜ/BOOST_MATERIAL_SCALING)^(OUTER · C)` where `B` is the
+ * total boost storage budget, `C = Σ c_i`, and `Sₜ = Σ sᵢ`.
+ *
+ * The closed-form budget that maximises the log-balance between production-multiplier growth
+ * and remaining free space is:
+ * ```
+ * B* = (OUTER · C · W − Sₜ / BOOST_MATERIAL_SCALING) / (1 + OUTER · C)
+ * ```
+ * clamped to `[0, warehouseSize]`.
+ *
+ * For large warehouses this converges to the asymptotic fraction `OUTER·C / (1 + OUTER·C)`
+ * (e.g. ~52.6% for Agriculture where C ≈ 1.52).
+ *
+ * @param warehouseSize - Total warehouse capacity `W`.
+ * @param factors - Map of material name → boost coefficient `c_i` (only entries with `c_i > 0` are used).
+ * @param sizes - Map of material name → storage size per unit `sᵢ`.
+ * @returns Optimal storage budget in warehouse units (always `≥ 0`).
+ */
+export function computeOptimalBoostStorageBudget(
+  warehouseSize: number,
+  factors: Partial<Record<CorpMaterialName, number>>,
+  sizes: Partial<Record<CorpMaterialName, number>>,
+): number {
+  const names = (Object.keys(factors) as CorpMaterialName[]).filter((n) => (factors[n] ?? 0) > 0)
+  if (names.length === 0) return 0
+
+  const C = names.reduce((sum, n) => sum + (factors[n] ?? 0), 0)
+  const S_total = names.reduce((sum, n) => sum + (sizes[n] ?? 0), 0)
+
+  const outerC = BOOST_MATERIAL_OUTER_EXPONENT * C
+  const budget = (outerC * warehouseSize - S_total / BOOST_MATERIAL_SCALING) / (1 + outerC)
+  return Math.max(0, budget)
+}
 
 /**
  * Compute the optimal boost material quantities for a given storage budget using the
@@ -92,12 +149,13 @@ function _computeRecursive(
 }
 
 /**
- * Reactive service that purchases boost materials each cycle to fill 50% of each warehouse.
+ * Reactive service that purchases boost materials each cycle to fill the optimal fraction of each warehouse.
  *
  * Enabled only when `config.enableBoostMaterials` is `true`. When enabled, fires on each
  * **SALE** phase (when `nextState` is `PURCHASE`) and for every active division × city:
- * 1. Computes the optimal boost material quantities for {@link BOOST_FILL_RATIO} of warehouse capacity.
- * 2. Buys only the deficit (target − stored), skipping materials already at or above target.
+ * 1. Computes the optimal total boost storage budget via {@link computeOptimalBoostStorageBudget}.
+ * 2. Distributes that budget across materials via {@link computeBoostMaterialQuantities}.
+ * 3. Buys only the deficit (target − stored), skipping materials already at or above target.
  */
 @injectable('Singleton')
 export class BoostMaterial {
@@ -167,7 +225,6 @@ export class BoostMaterial {
       first(),
       map(({ division, warehouse, industryData, materialData }) => {
         const industry = industryData[division.type as CorpIndustryName]
-        const storageTarget = warehouse.size * BOOST_FILL_RATIO
 
         // Build factor and size maps for materials this industry supports
         const factors: Partial<Record<CorpMaterialName, number>> = {}
@@ -181,6 +238,7 @@ export class BoostMaterial {
           }
         }
 
+        const storageTarget = computeOptimalBoostStorageBudget(warehouse.size, factors, sizes)
         const targets = computeBoostMaterialQuantities(storageTarget, factors, sizes)
 
         for (const [name, targetQty] of Object.entries(targets) as [CorpMaterialName, number][]) {

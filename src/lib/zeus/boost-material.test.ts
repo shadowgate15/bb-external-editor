@@ -20,7 +20,7 @@ import { createDivisionsMock, DivisionsMock } from './__mocks__/divisions'
 import { createIndustryDataMock, IndustryDataMock } from './__mocks__/industry-data'
 import { createMaterialDataMock, MaterialDataMock } from './__mocks__/material-data'
 import { createWarehousesMock, WarehousesMock } from './__mocks__/warehouses'
-import { BoostMaterial, computeBoostMaterialQuantities } from './boost-material'
+import { BoostMaterial, computeBoostMaterialQuantities, computeOptimalBoostStorageBudget } from './boost-material'
 import type { Config } from './config'
 import type { Corporation } from './corporation'
 import type { Divisions } from './divisions'
@@ -211,6 +211,81 @@ describe('computeBoostMaterialQuantities', () => {
   test('returns empty record when factors map is empty', () => {
     const result = computeBoostMaterialQuantities(500, {}, {})
     expect(result).toEqual({})
+  })
+})
+
+// --- Suite: computeOptimalBoostStorageBudget ---
+
+describe('computeOptimalBoostStorageBudget', () => {
+  /**
+   * Agriculture factors: RE=0.72, HW=0.2, RO=0.3, AI=0.3 → C=1.52
+   * Asymptotic fill fraction = 0.73*1.52 / (1 + 0.73*1.52) ≈ 0.526
+   */
+  const AGRI_FACTORS = {
+    'Real Estate': 0.72,
+    Hardware: 0.2,
+    Robots: 0.3,
+    'AI Cores': 0.3,
+  } as Partial<Record<CorpMaterialName, number>>
+
+  const AGRI_SIZES = {
+    'Real Estate': 0.005,
+    Hardware: 0.06,
+    Robots: 1,
+    'AI Cores': 0.1,
+  } as Partial<Record<CorpMaterialName, number>>
+
+  test('returns 0 when factors map is empty', () => {
+    expect(computeOptimalBoostStorageBudget(10_000, {}, {})).toBe(0)
+  })
+
+  test('returns 0 when all factors are zero', () => {
+    const factors = { 'Real Estate': 0, Hardware: 0 } as Partial<Record<CorpMaterialName, number>>
+    const sizes = { 'Real Estate': 0.005, Hardware: 0.06 } as Partial<Record<CorpMaterialName, number>>
+    expect(computeOptimalBoostStorageBudget(10_000, factors, sizes)).toBe(0)
+  })
+
+  test('returns 0 for a warehouse too small to justify boost materials', () => {
+    // Very small warehouse: B* = (0.73*1.52*1 - 500*1.165) / (1 + 0.73*1.52) ≈ negative
+    // S_total = 0.005+0.06+1+0.1 = 1.165 → 500*1.165 = 582.5
+    // 0.73*1.52*1 = 1.1096 → B* < 0 → clamped to 0
+    expect(computeOptimalBoostStorageBudget(1, AGRI_FACTORS, AGRI_SIZES)).toBe(0)
+  })
+
+  test('approaches the asymptotic fill fraction for a large Agriculture warehouse', () => {
+    // Asymptote: 0.73*1.52 / (1 + 0.73*1.52) = 1.1096 / 2.1096 ≈ 0.5260
+    const W = 10_000_000
+    const budget = computeOptimalBoostStorageBudget(W, AGRI_FACTORS, AGRI_SIZES)
+    const actualRatio = budget / W
+
+    const C = 1.52
+    const outerC = 0.73 * C
+    const expectedAsymptote = outerC / (1 + outerC)
+
+    expect(actualRatio).toBeCloseTo(expectedAsymptote, 3)
+  })
+
+  test('budget is strictly less than warehouse size', () => {
+    const budget = computeOptimalBoostStorageBudget(10_000, AGRI_FACTORS, AGRI_SIZES)
+    expect(budget).toBeLessThan(10_000)
+    expect(budget).toBeGreaterThan(0)
+  })
+
+  test('budget increases monotonically with warehouse size', () => {
+    const b1 = computeOptimalBoostStorageBudget(1_000, AGRI_FACTORS, AGRI_SIZES)
+    const b2 = computeOptimalBoostStorageBudget(10_000, AGRI_FACTORS, AGRI_SIZES)
+    const b3 = computeOptimalBoostStorageBudget(1_000_000, AGRI_FACTORS, AGRI_SIZES)
+    expect(b1).toBeLessThan(b2)
+    expect(b2).toBeLessThan(b3)
+  })
+
+  test('single material: returns simple closed-form value', () => {
+    // C=1, S_total=0.1 → B* = (0.73*1*W - 0.1/0.002) / (1+0.73) = (0.73W - 50) / 1.73
+    const factors = { Hardware: 1 } as Partial<Record<CorpMaterialName, number>>
+    const sizes = { Hardware: 0.1 } as Partial<Record<CorpMaterialName, number>>
+    const W = 10_000
+    const expected = (0.73 * W - 0.1 / 0.002) / (1 + 0.73)
+    expect(computeOptimalBoostStorageBudget(W, factors, sizes)).toBeCloseTo(expected, 5)
   })
 })
 
