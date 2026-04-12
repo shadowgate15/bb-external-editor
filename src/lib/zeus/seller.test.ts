@@ -129,6 +129,7 @@ const INDUSTRY_DATA = {
     requiredMaterials: {},
     makesMaterials: true,
     makesProducts: false,
+    producedMaterials: ['Plants'],
   } as CorpIndustryData,
 } as Record<CorpIndustryName, CorpIndustryData>
 
