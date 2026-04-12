@@ -11,6 +11,7 @@ import { PortNumberBuilder } from '@/lib/port-number'
 
 import { Config } from '../config'
 import { Divisions } from '../divisions'
+import { StorageUpgrader } from '../storage-upgrader'
 import {
   ClientMethodMap,
   Response,
@@ -63,6 +64,9 @@ export class CorporationDaemonServer {
 
     @inject(Divisions)
     protected readonly divisions: Divisions,
+
+    @inject(StorageUpgrader)
+    protected readonly storageUpgrader: StorageUpgrader,
   ) {
     this.port = PortNumberBuilder.fromServer(this.ns, 'home').corporation().daemon().build()
 
@@ -136,6 +140,10 @@ export class CorporationDaemonServer {
 
     this.server.addMethod('clearBoostMaterials', () => {
       this.divisions.clearBoostMaterials()
+    })
+
+    this.server.addMethod('upgradeStorage', ({ divisionName, smartFactories = false }) => {
+      this.storageUpgrader.upgradeStorage(divisionName, smartFactories)
     })
   }
 

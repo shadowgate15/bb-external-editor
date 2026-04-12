@@ -1,4 +1,8 @@
-import { CityName } from '@ns'
+import 'reflect-metadata'
+
+import { inject, injectable } from 'inversify'
+
+import { NSIdentifier } from '../ns.identifier'
 
 /**
  * Price multiplier applied per level for corporation-wide upgrades (Smart Storage, Smart Factories).
@@ -47,7 +51,7 @@ export interface StorageUpgradePlan {
   /** Number of Smart Factories levels to buy. */
   smartFactoriesLevels: number
   /** Map of city name to number of warehouse upgrade levels to buy for that city. */
-  warehouseLevels: Record<CityName, number>
+  warehouseLevels: Record<string, number>
   /** Total funds consumed by the plan. */
   totalCost: number
 }
@@ -135,4 +139,62 @@ export function computeUpgradePlan(input: StorageUpgradeInput): StorageUpgradePl
   }
 
   return plan
+}
+
+/**
+ * Injectable service that executes an optimal one-off storage and production
+ * upgrade purchase against the current corporation funds.
+ *
+ * Wraps {@link computeUpgradePlan} and applies the resulting plan immediately
+ * via the Bitburner NS corporation API.
+ */
+@injectable('Singleton')
+export class StorageUpgrader {
+  constructor(
+    @inject(NSIdentifier)
+    private readonly ns: NS,
+  ) {}
+
+  /**
+   * Compute and immediately execute the optimal upgrade plan for the given
+   * division using all currently available corporation funds.
+   *
+   * @param divisionName - The division whose warehouse upgrades should be included.
+   * @param includeSmartFactories - When `true`, Smart Factories levels compete
+   *   alongside storage upgrades in the greedy allocation.
+   * @returns The executed {@link StorageUpgradePlan} (levels bought and total cost).
+   */
+  upgradeStorage(divisionName: string, includeSmartFactories: boolean): StorageUpgradePlan {
+    const funds = this.ns.corporation.getCorporation().funds
+    const division = this.ns.corporation.getDivision(divisionName)
+
+    const cityWarehouseCosts = Object.fromEntries(
+      division.cities.map((city) => [city, this.ns.corporation.getUpgradeWarehouseCost(divisionName, city, 1)]),
+    )
+
+    const plan = computeUpgradePlan({
+      budget: funds,
+      currentSmartStorageCost: this.ns.corporation.getUpgradeLevelCost('Smart Storage'),
+      currentSmartFactoriesCost: this.ns.corporation.getUpgradeLevelCost('Smart Factories'),
+      includeSmartFactories,
+      cityWarehouseCosts,
+    })
+
+    // levelUpgrade does not support bulk purchasing — loop once per level
+    for (let i = 0; i < plan.smartStorageLevels; i++) {
+      this.ns.corporation.levelUpgrade('Smart Storage')
+    }
+    for (let i = 0; i < plan.smartFactoriesLevels; i++) {
+      this.ns.corporation.levelUpgrade('Smart Factories')
+    }
+
+    // upgradeWarehouse accepts an `amt` argument — batch each city in one call
+    for (const [city, levels] of Object.entries(plan.warehouseLevels)) {
+      if (levels > 0) {
+        this.ns.corporation.upgradeWarehouse(divisionName, city, levels)
+      }
+    }
+
+    return plan
+  }
 }

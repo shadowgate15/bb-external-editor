@@ -98,6 +98,7 @@ export type ServerMethodMap = {
   configUpdated: (config?: ConfigData) => void
   getConfig: (opts: { id: string; returnPort: number }) => void
   clearBoostMaterials: () => void
+  upgradeStorage: (opts: { divisionName: string; smartFactories?: boolean }) => void
 }
 
 export type ClientMethodMap = {
