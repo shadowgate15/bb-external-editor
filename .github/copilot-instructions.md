@@ -171,3 +171,11 @@ source$.pipe(
 - Single quotes, no semicolons, 2-space indent, 120-character print width, trailing commas.
 - Imports are auto-sorted by `eslint-plugin-simple-import-sort` (enforced as error).
 - Unused variables prefixed with `_` are ignored by ESLint.
+
+## Corporation Automation (Zeus)
+
+The `zeus/` library provides high-level abstractions for automating corporation management. It uses Inversify for DI and RxJS for reactive state management. The main entry point is the `Zeus` class, which orchestrates various services like `DivisionManager`, `EmployeeManager`, and `UpgradeManager`. Each service exposes methods to perform specific tasks (e.g., hiring employees, purchasing upgrades) and maintains observables for relevant state (e.g., current funds, employee count). The `zeusModule` registers all services in the DI container, allowing them to be injected into scripts or other services as needed.
+
+### Extra Documentation
+
+Additional documentation/suggestions for the in-game mechanics can be found at this [google doc](https://drive.google.com/file/d/1PCKaKgMBXrYsPyZ-vTRR9MBQI-f6ersJ/view) by CatLover.
