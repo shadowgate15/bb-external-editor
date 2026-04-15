@@ -6,6 +6,7 @@ import { ignoreElements } from 'rxjs'
 import { NSIdentifier } from '../ns.identifier'
 import { BoostMaterial } from './boost-material'
 import { CorporationDaemonServer } from './daemon/server'
+import { ExportManager } from './export-manager'
 import { Seller } from './seller'
 import { SmartSupply } from './smart-supply'
 import { StateManager } from './state-manager'
@@ -30,6 +31,9 @@ export class App {
 
     @inject(BoostMaterial)
     private readonly boostMaterial: BoostMaterial,
+
+    @inject(ExportManager)
+    private readonly exportManager: ExportManager,
   ) {
     this.ns.atExit(() => {
       this.server.close()
@@ -40,6 +44,7 @@ export class App {
     this.seller.start()
     this.smartSupply.start()
     this.boostMaterial.start()
+    this.exportManager.start()
 
     return new Promise<void>((resolve, reject) => {
       this.stateManager.state$().pipe(ignoreElements()).subscribe({

@@ -2,6 +2,7 @@ import type { CityName, Division, Material, Product } from '@ns'
 import { Observable, Subject } from 'rxjs'
 
 export type DivisionsMock = {
+  info$: jest.MockedFunction<() => Observable<Record<string, Division>>>
   eachDivisionNameAndCityName$: jest.MockedFunction<() => Observable<{ divisionName: string; cityName: CityName }>>
   divisionFor$: jest.MockedFunction<(divisionName: string) => Observable<Division>>
   divisionCityProductsFor$: jest.MockedFunction<(divisionName: string, cityName: string) => Observable<Product[]>>
@@ -19,6 +20,7 @@ export type DivisionsMock = {
 export function createDivisionsMock(): DivisionsMock {
   const subject = new Subject<{ divisionName: string; cityName: CityName }>()
   return {
+    info$: jest.fn<Observable<Record<string, Division>>, []>(),
     eachDivisionNameAndCityName$: jest
       .fn<Observable<{ divisionName: string; cityName: CityName }>, []>()
       .mockReturnValue(subject.asObservable()),
