@@ -5,6 +5,7 @@ import type {
   CorpIndustryName,
   CorpMaterialName,
   CorpStateName,
+  CorpUnlockName,
   Division,
   Material,
 } from '@ns'
@@ -246,6 +247,8 @@ describe('ExportManager', () => {
     industryDataMock = createIndustryDataMock()
     totalRawProductionMock = createTotalRawProductionMock()
     testScheduler = makeTestScheduler()
+    // Default: Export unlock is purchased
+    corporationMock.hasUnlockFor$.mockReturnValue(of(true))
   })
 
   describe('setupExports$', () => {
@@ -479,6 +482,60 @@ describe('ExportManager', () => {
         CITY_B,
         'Plants',
       )
+    })
+  })
+
+  describe('Export unlock absent', () => {
+    beforeEach(() => {
+      corporationMock.hasUnlockFor$.mockReturnValue(of(false))
+    })
+
+    test('setupExports$ does not call exportMaterial when Export unlock is not purchased', () => {
+      const AGRI_CHEM_KEY = `ChemCorp|${CITY_A}`
+      const totalRawProdMap = { [AGRI_CHEM_KEY]: 500 }
+
+      divisionsMock.info$.mockReturnValue(of({ AgriCorp: AGRI_DIVISION, ChemCorp: CHEM_DIVISION }))
+      industryDataMock.data$.mockReturnValue(of(INDUSTRY_DATA_AGRI_CHEM))
+      totalRawProductionMock.totalRawProduction$ = of(totalRawProdMap)
+
+      jest.mocked(mockNs.corporation.getMaterial).mockImplementation((div, _city, mat) => {
+        if (div === 'AgriCorp' && mat === 'Plants') return makeMaterial({ productionAmount: 300, stored: 0 })
+        return makeMaterial()
+      })
+
+      testScheduler.run(({ cold }) => {
+        corporationMock.nextState$.mockReturnValue(cold('a', { a: 'EXPORT' as CorpStateName }))
+        getSut().setupExports$.subscribe()
+      })
+
+      expect(mockNs.corporation.exportMaterial).not.toHaveBeenCalled()
+    })
+
+    test('clearExports$ does not call cancelExportMaterial when Export unlock is not purchased', () => {
+      divisionsMock.info$.mockReturnValue(of({ AgriCorp: AGRI_DIVISION }))
+      industryDataMock.data$.mockReturnValue(of(INDUSTRY_DATA_AGRI_CHEM))
+
+      const activeExport = { division: 'ChemCorp', city: CITY_A, amount: '100' }
+      jest.mocked(mockNs.corporation.getMaterial).mockImplementation((_div, _city, mat) => {
+        if (mat === 'Plants') return makeMaterial({ exports: [activeExport] })
+        return makeMaterial()
+      })
+
+      testScheduler.run(({ cold }) => {
+        corporationMock.previousState$.mockReturnValue(cold('a', { a: 'EXPORT' as CorpStateName }))
+        getSut().clearExports$.subscribe()
+      })
+
+      expect(mockNs.corporation.cancelExportMaterial).not.toHaveBeenCalled()
+    })
+
+    test('setupExports$ checks unlock with the correct unlock name', () => {
+      testScheduler.run(({ cold }) => {
+        corporationMock.nextState$.mockReturnValue(cold('a', { a: 'EXPORT' as CorpStateName }))
+        getSut().setupExports$.subscribe()
+      })
+
+      expect(corporationMock.hasUnlockFor$).toHaveBeenCalledWith('Export' as CorpUnlockName)
     })
   })
 })

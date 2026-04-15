@@ -1,5 +1,5 @@
 import { makeTestScheduler } from '__helpers__/test-scheduler'
-import type { CorporationInfo, CorpResearchName, CorpStateName, CorpUpgradeName } from '@ns'
+import type { CorporationInfo, CorpResearchName, CorpStateName, CorpUnlockName, CorpUpgradeName } from '@ns'
 import { createNsMock } from '@ns-mock'
 import { TestScheduler } from 'rxjs/testing'
 
@@ -7,6 +7,7 @@ import { createStateManagerMock } from './__mocks__/state-manager'
 import { Corporation } from './corporation'
 import type { StateManager } from './state-manager'
 
+const UNLOCK_NAMES = ['Export', 'Smart Supply'] as CorpUnlockName[]
 const UPGRADE_NAMES = ['Smart Factories', 'Smart Storage'] as CorpUpgradeName[]
 const RESEARCH_NAMES = ['Hi-Tech R&D Laboratory', 'AutoBrew'] as CorpResearchName[]
 
@@ -34,6 +35,7 @@ describe('Corporation', () => {
 
     jest.mocked(mockNs.corporation.getCorporation).mockReturnValue(makeCorporationInfo())
     jest.mocked(mockNs.corporation.getConstants).mockReturnValue({
+      unlockNames: UNLOCK_NAMES,
       upgradeNames: UPGRADE_NAMES,
       researchNames: RESEARCH_NAMES,
     } as unknown as ReturnType<typeof mockNs.corporation.getConstants>)
@@ -256,6 +258,61 @@ describe('Corporation', () => {
 
         stateManagerMock.state$.mockReturnValue(cold<CorpStateName>(input, { a: 'START' }))
         expectObservable(getSut().previousStateOf$('PURCHASE')).toBe(result, { a: false })
+      })
+    })
+  })
+
+  describe('hasUnlocks$', () => {
+    test('should return the same observable instance on every call', () => {
+      const sut = getSut()
+      expect(sut.hasUnlocks$()).toBe(sut.hasUnlocks$())
+    })
+
+    test('should emit a record mapping each unlock name to its purchased status', () => {
+      jest.mocked(mockNs.corporation.hasUnlock).mockImplementation((name) => name === 'Export')
+
+      testScheduler.run(({ cold, expectObservable }) => {
+        stateManagerMock.state$.mockReturnValue(cold<CorpStateName>('(a)', { a: 'START' }))
+        expectObservable(getSut().hasUnlocks$()).toBe('(a)', {
+          a: { Export: true, 'Smart Supply': false },
+        })
+      })
+    })
+
+    test('should re-fetch on each state$ emission', () => {
+      jest
+        .mocked(mockNs.corporation.hasUnlock)
+        .mockReturnValueOnce(false)
+        .mockReturnValueOnce(false)
+        .mockReturnValueOnce(true)
+        .mockReturnValueOnce(false)
+
+      testScheduler.run(({ cold, expectObservable }) => {
+        stateManagerMock.state$.mockReturnValue(cold<CorpStateName>('a-b', { a: 'START', b: 'PURCHASE' }))
+        expectObservable(getSut().hasUnlocks$()).toBe('a-b', {
+          a: { Export: false, 'Smart Supply': false },
+          b: { Export: true, 'Smart Supply': false },
+        })
+      })
+    })
+  })
+
+  describe('hasUnlockFor$', () => {
+    test('returns true when the unlock has been purchased', () => {
+      jest.mocked(mockNs.corporation.hasUnlock).mockImplementation((name) => name === 'Export')
+
+      testScheduler.run(({ cold, expectObservable }) => {
+        stateManagerMock.state$.mockReturnValue(cold<CorpStateName>('(a)', { a: 'START' }))
+        expectObservable(getSut().hasUnlockFor$('Export')).toBe('(a|)', { a: true })
+      })
+    })
+
+    test('returns false when the unlock has not been purchased', () => {
+      jest.mocked(mockNs.corporation.hasUnlock).mockReturnValue(false)
+
+      testScheduler.run(({ cold, expectObservable }) => {
+        stateManagerMock.state$.mockReturnValue(cold<CorpStateName>('(a)', { a: 'START' }))
+        expectObservable(getSut().hasUnlockFor$('Export')).toBe('(a|)', { a: false })
       })
     })
   })

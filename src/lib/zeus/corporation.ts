@@ -1,6 +1,6 @@
 import 'reflect-metadata'
 
-import { CorporationInfo, CorpResearchName, CorpStateName, CorpUpgradeName } from '@ns'
+import { CorporationInfo, CorpResearchName, CorpStateName, CorpUnlockName, CorpUpgradeName } from '@ns'
 import { inject, injectable } from 'inversify'
 import { first, from, map, mergeMap, Observable, of, reduce, scan, shareReplay, single, switchMap, tap } from 'rxjs'
 
@@ -41,6 +41,26 @@ export class Corporation {
   /** Names of all divisions currently owned by the corporation. */
   readonly _divisionNames$: Observable<string[]> = this.info$().pipe(
     map((info) => info.divisions),
+    shareReplay(1),
+  )
+
+  /**
+   * Whether each one-time unlock has been purchased corporation-wide.
+   * Re-fetched on each state tick by iterating all unlock names from the game constants.
+   */
+  readonly _hasUnlocks$: Observable<Record<CorpUnlockName, boolean>> = this.stateManager.state$().pipe(
+    switchMap(() =>
+      from(this.ns.corporation.getConstants().unlockNames).pipe(
+        // accumulate {unlockName → hasUnlock} into a single record
+        reduce(
+          (acc, unlockName) => ({
+            ...acc,
+            [unlockName]: this.ns.corporation.hasUnlock(unlockName),
+          }),
+          {} as Record<CorpUnlockName, boolean>,
+        ),
+      ),
+    ),
     shareReplay(1),
   )
 
@@ -129,6 +149,11 @@ export class Corporation {
     return this._upgradeLevels$
   }
 
+  /** @returns Observable of a record mapping every unlock name to whether it has been purchased. */
+  hasUnlocks$() {
+    return this._hasUnlocks$
+  }
+
   /** @returns Observable of the full `{divisionName}|{researchName}` → boolean research map. */
   hasResearched$() {
     return this._hasResearched$
@@ -145,6 +170,19 @@ export class Corporation {
       map((upgradeLevels) => upgradeLevels[upgradeName]),
       // wait for the upgrade level to be available
       first((level) => level !== undefined),
+    )
+  }
+
+  /**
+   * Check whether a one-time corporation-wide unlock has been purchased.
+   *
+   * @param unlockName - The name of the unlock to check.
+   * @returns Observable that emits `true` if the unlock has been purchased, `false` otherwise.
+   */
+  hasUnlockFor$(unlockName: CorpUnlockName): Observable<boolean> {
+    return this._hasUnlocks$.pipe(
+      map((hasUnlocks) => hasUnlocks[unlockName]),
+      first((has) => has !== undefined),
     )
   }
 

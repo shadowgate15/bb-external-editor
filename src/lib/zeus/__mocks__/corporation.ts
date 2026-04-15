@@ -1,4 +1,4 @@
-import type { CorporationInfo, CorpResearchName, CorpStateName, CorpUpgradeName } from '@ns'
+import type { CorporationInfo, CorpResearchName, CorpStateName, CorpUnlockName, CorpUpgradeName } from '@ns'
 import { Observable, Subject } from 'rxjs'
 
 export type CorporationMock = {
@@ -7,8 +7,10 @@ export type CorporationMock = {
   previousState$: jest.MockedFunction<() => Observable<CorpStateName>>
   divisionNames$: jest.MockedFunction<() => Observable<string[]>>
   upgradeLevels$: jest.MockedFunction<() => Observable<Record<CorpUpgradeName, number>>>
+  hasUnlocks$: jest.MockedFunction<() => Observable<Record<CorpUnlockName, boolean>>>
   hasResearched$: jest.MockedFunction<() => Observable<Record<string, boolean>>>
   upgradeLevelFor$: jest.MockedFunction<(upgradeName: CorpUpgradeName) => Observable<number>>
+  hasUnlockFor$: jest.MockedFunction<(unlockName: CorpUnlockName) => Observable<boolean>>
   hasResearchedFor$: jest.MockedFunction<(divisionName: string, researchName: CorpResearchName) => Observable<boolean>>
   previousStateOf$: jest.MockedFunction<(stateName: CorpStateName) => Observable<boolean>>
   /** Controllable subjects for the zero-arg observable methods. Push values here in tests. */
@@ -18,6 +20,7 @@ export type CorporationMock = {
     previousState: Subject<CorpStateName>
     divisionNames: Subject<string[]>
     upgradeLevels: Subject<Record<CorpUpgradeName, number>>
+    hasUnlocks: Subject<Record<CorpUnlockName, boolean>>
     hasResearched: Subject<Record<string, boolean>>
   }
 }
@@ -66,6 +69,7 @@ export function createCorporationMock(): CorporationMock {
     previousState: new Subject<CorpStateName>(),
     divisionNames: new Subject<string[]>(),
     upgradeLevels: new Subject<Record<CorpUpgradeName, number>>(),
+    hasUnlocks: new Subject<Record<CorpUnlockName, boolean>>(),
     hasResearched: new Subject<Record<string, boolean>>(),
   }
 
@@ -77,10 +81,14 @@ export function createCorporationMock(): CorporationMock {
     upgradeLevels$: jest
       .fn<Observable<Record<CorpUpgradeName, number>>, []>()
       .mockReturnValue(subjects.upgradeLevels.asObservable()),
+    hasUnlocks$: jest
+      .fn<Observable<Record<CorpUnlockName, boolean>>, []>()
+      .mockReturnValue(subjects.hasUnlocks.asObservable()),
     hasResearched$: jest
       .fn<Observable<Record<string, boolean>>, []>()
       .mockReturnValue(subjects.hasResearched.asObservable()),
     upgradeLevelFor$: jest.fn<Observable<number>, [CorpUpgradeName]>(),
+    hasUnlockFor$: jest.fn<Observable<boolean>, [CorpUnlockName]>(),
     hasResearchedFor$: jest.fn<Observable<boolean>, [string, CorpResearchName]>(),
     previousStateOf$: jest.fn<Observable<boolean>, [CorpStateName]>(),
     subjects,

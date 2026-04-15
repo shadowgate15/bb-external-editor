@@ -113,20 +113,32 @@ function cancelAllProducerExports(
 export class ExportManager {
   /**
    * Observable that sets up export routes on each EXPORT state transition.
+   * Only active when the corporation-wide `Export` unlock has been purchased.
    */
   readonly setupExports$: Observable<void> = this.corporation.nextState$().pipe(
     filter((state) => state === 'EXPORT'),
     tap(() => this.ns.print('INFO ExportManager: setting up inter-division exports...')),
-    switchMap(() => this._applyExports$()),
+    switchMap(() =>
+      this.corporation.hasUnlockFor$('Export').pipe(
+        filter(Boolean),
+        switchMap(() => this._applyExports$()),
+      ),
+    ),
   )
 
   /**
    * Observable that cancels all active export routes when the EXPORT phase ends.
+   * Only active when the corporation-wide `Export` unlock has been purchased.
    */
   readonly clearExports$: Observable<void> = this.corporation.previousState$().pipe(
     filter((state) => state === 'EXPORT'),
     tap(() => this.ns.print('INFO ExportManager: clearing inter-division exports...')),
-    switchMap(() => this._cancelAllExports$()),
+    switchMap(() =>
+      this.corporation.hasUnlockFor$('Export').pipe(
+        filter(Boolean),
+        switchMap(() => this._cancelAllExports$()),
+      ),
+    ),
   )
 
   constructor(
