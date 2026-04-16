@@ -1,5 +1,6 @@
 import 'reflect-metadata'
 
+import { CityName } from '@ns'
 import { inject, injectable } from 'inversify'
 
 import { NSIdentifier } from '../ns.identifier'
@@ -189,7 +190,7 @@ export class StorageUpgrader {
     }
 
     // upgradeWarehouse accepts an `amt` argument — batch each city in one call
-    for (const [city, levels] of Object.entries(plan.warehouseLevels)) {
+    for (const [city, levels] of Object.entries(plan.warehouseLevels) as [CityName, number][]) {
       if (levels > 0) {
         this.ns.corporation.upgradeWarehouse(divisionName, city, levels)
       }
