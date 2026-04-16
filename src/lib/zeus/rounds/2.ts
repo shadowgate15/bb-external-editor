@@ -3,6 +3,10 @@ import { ToastVariant } from '@ns'
 import { assertIsString } from '@/lib/assert/is-string'
 
 export async function round2(ns: NS) {
+  ns.disableLog('sleep')
+  ns.ui.openTail()
+  await ns.sleep(100)
+
   const log = (msg: string, variant: ToastVariant | `${ToastVariant}`) => {
     ns.print(`SUCCESS ${msg}`)
     ns.toast(msg, variant)
