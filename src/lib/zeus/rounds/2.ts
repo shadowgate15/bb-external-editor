@@ -1,8 +1,13 @@
+import { ToastVariant } from '@ns'
+
 import { assertIsString } from '@/lib/assert/is-string'
 
-import { StorageUpgrader } from '../storage-upgrader'
-
 export async function round2(ns: NS) {
+  const log = (msg: string, variant: ToastVariant | `${ToastVariant}`) => {
+    ns.print(`SUCCESS ${msg}`)
+    ns.toast(msg, variant)
+  }
+
   // Purchase Export unlock if not already unlocked
   if (!ns.corporation.hasUnlock('Export')) {
     ns.corporation.purchaseUnlock('Export')
@@ -16,18 +21,25 @@ export async function round2(ns: NS) {
   const agDivisionName = assertIsString(
     corp.divisions.find((d) => ns.corporation.getDivision(d).type === 'Agriculture'),
   )
-  const agDivision = ns.corporation.getDivision(agDivisionName)
+  let agDivision = ns.corporation.getDivision(agDivisionName)
 
   for (const cityName of agDivision.cities) {
-    const office = ns.corporation.getOffice(agDivisionName, cityName)
+    let office = ns.corporation.getOffice(agDivisionName, cityName)
 
     if (office.size < 9) {
+      await waitForFunds(ns, ns.corporation.getOfficeSizeUpgradeCost(agDivisionName, cityName, 9 - office.size))
+
       ns.corporation.upgradeOfficeSize(agDivisionName, cityName, 9 - office.size)
+      log(`Upgraded ${agDivisionName} office in ${cityName} to size 9`, 'success')
     }
 
     // Hire Employes up to 9 (max for size 9 office) to maximize production
     while (office.numEmployees < 9) {
-      ns.corporation.hireEmployee(agDivisionName, cityName)
+      await waitFor(ns, () => ns.corporation.hireEmployee(agDivisionName, cityName))
+
+      office = ns.corporation.getOffice(agDivisionName, cityName) // Refresh office info after hiring
+
+      log(`Hired employee for ${agDivisionName} in ${cityName} (${office.numEmployees}/9)`, 'success')
     }
 
     ns.corporation.setAutoJobAssignment(agDivisionName, cityName, 'Operations', 2)
@@ -35,10 +47,18 @@ export async function round2(ns: NS) {
     ns.corporation.setAutoJobAssignment(agDivisionName, cityName, 'Business', 2)
     ns.corporation.setAutoJobAssignment(agDivisionName, cityName, 'Management', 2)
     ns.corporation.setAutoJobAssignment(agDivisionName, cityName, 'Research & Development', 1)
+
+    log(`Set job assignments for ${agDivisionName} in ${cityName}`, 'success')
   }
 
   while (agDivision.numAdVerts < 8) {
+    await waitForFunds(ns, ns.corporation.getHireAdVertCost(agDivisionName))
+
     ns.corporation.hireAdVert(agDivisionName)
+
+    agDivision = ns.corporation.getDivision(agDivisionName) // Refresh division info after hiring
+
+    log(`Hired AdVert for ${agDivisionName} (${agDivision.numAdVerts}/8)`, 'success')
   }
 
   /**
@@ -47,20 +67,31 @@ export async function round2(ns: NS) {
   const chemicalDivisionName = 'Chemical'
 
   ns.corporation.expandIndustry('Chemical', chemicalDivisionName)
+  log(`Expanded industry ${chemicalDivisionName}`, 'success')
 
   for (const cityName of Object.values(ns.enums.CityName)) {
     ns.corporation.expandCity(chemicalDivisionName, cityName)
-    ns.corporation.purchaseWarehouse(chemicalDivisionName, cityName)
+    log(`Expanded ${chemicalDivisionName} to ${cityName}`, 'success')
 
-    const office = ns.corporation.getOffice(agDivisionName, cityName)
+    await waitForFunds(ns, ns.corporation.getUpgradeWarehouseCost(chemicalDivisionName, cityName))
+    ns.corporation.purchaseWarehouse(chemicalDivisionName, cityName)
+    log(`Purchased warehouse for ${chemicalDivisionName} in ${cityName}`, 'success')
+
+    let office = ns.corporation.getOffice(agDivisionName, cityName)
 
     if (office.size < 5) {
+      await waitForFunds(ns, ns.corporation.getOfficeSizeUpgradeCost(chemicalDivisionName, cityName, 5 - office.size))
       ns.corporation.upgradeOfficeSize(agDivisionName, cityName, 5 - office.size)
+      log(`Upgraded ${chemicalDivisionName} office in ${cityName} to size 5`, 'success')
     }
 
     // Hire Employes up to 5 (max for size 5 office) to maximize production
     while (office.numEmployees < 5) {
-      ns.corporation.hireEmployee(agDivisionName, cityName)
+      await waitFor(ns, () => ns.corporation.hireEmployee(agDivisionName, cityName))
+
+      office = ns.corporation.getOffice(agDivisionName, cityName) // Refresh office info after hiring
+
+      log(`Hired employee for ${chemicalDivisionName} in ${cityName} (${office.numEmployees}/5)`, 'success')
     }
 
     ns.corporation.setAutoJobAssignment(agDivisionName, cityName, 'Operations', 1)
@@ -68,13 +99,16 @@ export async function round2(ns: NS) {
     ns.corporation.setAutoJobAssignment(agDivisionName, cityName, 'Business', 1)
     ns.corporation.setAutoJobAssignment(agDivisionName, cityName, 'Management', 1)
     ns.corporation.setAutoJobAssignment(agDivisionName, cityName, 'Research & Development', 1)
+    log(`Set job assignments for ${chemicalDivisionName} in ${cityName}`, 'success')
   }
+}
 
-  /**
-   * Optimize Agriculture `Smart Storage`, `Smart Factory`, and warehouse levels with remaining funds
-   */
+async function waitFor(ns: NS, condition: () => boolean) {
+  while (!condition()) {
+    await ns.sleep(1000)
+  }
+}
 
-  const storageUpgrader = new StorageUpgrader(ns)
-
-  storageUpgrader.upgradeStorage(agDivisionName, true)
+async function waitForFunds(ns: NS, amount: number) {
+  return waitFor(ns, () => ns.corporation.getCorporation().funds >= amount)
 }
