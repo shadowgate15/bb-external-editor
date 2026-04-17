@@ -6,6 +6,7 @@ import { ignoreElements } from 'rxjs'
 import { NSIdentifier } from '../ns.identifier'
 import { BoostMaterial } from './boost-material'
 import { CorporationDaemonServer } from './daemon/server'
+import { EnergyMoraleOptimizer } from './energy-morale-optimizer'
 import { ExportManager } from './export-manager'
 import { OptimizeJobs } from './optimize-jobs'
 import { Seller } from './seller'
@@ -38,6 +39,9 @@ export class App {
 
     @inject(OptimizeJobs)
     private readonly optimizeJobs: OptimizeJobs,
+
+    @inject(EnergyMoraleOptimizer)
+    private readonly energyMoraleOptimizer: EnergyMoraleOptimizer,
   ) {
     this.ns.atExit(() => {
       this.server.close()
@@ -50,6 +54,7 @@ export class App {
     this.boostMaterial.start()
     this.exportManager.start()
     this.optimizeJobs.start()
+    this.energyMoraleOptimizer.start()
 
     return new Promise<void>((resolve, reject) => {
       this.stateManager.state$().pipe(ignoreElements()).subscribe({

@@ -434,7 +434,11 @@ describe('OptimizeJobs', () => {
   describe('optimizeJobs$', () => {
     test('should not emit when config has enableOptimizeJobs = false', () => {
       testScheduler.run(({ cold, expectObservable }) => {
-        configMock.data$.mockReturnValue(cold('a', { a: { enableOptimizeJobs: false, enableBoostMaterials: false, jobProductionWeights: DEFAULT_JOB_WEIGHTS } }))
+        configMock.data$.mockReturnValue(
+          cold('a', {
+            a: { enableOptimizeJobs: false, enableBoostMaterials: false, jobProductionWeights: DEFAULT_JOB_WEIGHTS },
+          }),
+        )
         corporationMock.nextState$.mockReturnValue(cold('b', { b: 'START' as CorpStateName }))
 
         expectObservable(getSut().optimizeJobs$).toBe('')
@@ -443,7 +447,11 @@ describe('OptimizeJobs', () => {
 
     test('should not emit when nextState$ is not START (even if config enabled)', () => {
       testScheduler.run(({ cold, expectObservable }) => {
-        configMock.data$.mockReturnValue(cold('a', { a: { enableOptimizeJobs: true, enableBoostMaterials: false, jobProductionWeights: DEFAULT_JOB_WEIGHTS } }))
+        configMock.data$.mockReturnValue(
+          cold('a', {
+            a: { enableOptimizeJobs: true, enableBoostMaterials: false, jobProductionWeights: DEFAULT_JOB_WEIGHTS },
+          }),
+        )
         corporationMock.nextState$.mockReturnValue(cold('b', { b: 'PURCHASE' as CorpStateName }))
 
         expectObservable(getSut().optimizeJobs$).toBe('')
@@ -461,7 +469,9 @@ describe('OptimizeJobs', () => {
 
       testScheduler.run(({ cold }) => {
         configMock.data$.mockReturnValue(
-          cold('a', { a: { enableOptimizeJobs: true, enableBoostMaterials: false, jobProductionWeights: DEFAULT_JOB_WEIGHTS } }),
+          cold('a', {
+            a: { enableOptimizeJobs: true, enableBoostMaterials: false, jobProductionWeights: DEFAULT_JOB_WEIGHTS },
+          }),
         )
         corporationMock.nextState$.mockReturnValue(cold('b', { b: 'START' as CorpStateName }))
         divisionsMock.eachDivisionNameAndCityName$.mockReturnValue(
@@ -496,7 +506,9 @@ describe('OptimizeJobs', () => {
 
       testScheduler.run(({ cold }) => {
         configMock.data$.mockReturnValue(
-          cold('a', { a: { enableOptimizeJobs: true, enableBoostMaterials: false, jobProductionWeights: DEFAULT_JOB_WEIGHTS } }),
+          cold('a', {
+            a: { enableOptimizeJobs: true, enableBoostMaterials: false, jobProductionWeights: DEFAULT_JOB_WEIGHTS },
+          }),
         )
         corporationMock.nextState$.mockReturnValue(cold('b', { b: 'START' as CorpStateName }))
         divisionsMock.eachDivisionNameAndCityName$.mockReturnValue(
@@ -527,7 +539,9 @@ describe('OptimizeJobs', () => {
 
       testScheduler.run(({ cold }) => {
         configMock.data$.mockReturnValue(
-          cold('a', { a: { enableOptimizeJobs: true, enableBoostMaterials: false, jobProductionWeights: DEFAULT_JOB_WEIGHTS } }),
+          cold('a', {
+            a: { enableOptimizeJobs: true, enableBoostMaterials: false, jobProductionWeights: DEFAULT_JOB_WEIGHTS },
+          }),
         )
         corporationMock.nextState$.mockReturnValue(cold('b', { b: 'START' as CorpStateName }))
         divisionsMock.eachDivisionNameAndCityName$.mockReturnValue(
@@ -547,7 +561,9 @@ describe('OptimizeJobs', () => {
 
       testScheduler.run(({ cold }) => {
         configMock.data$.mockReturnValue(
-          cold('a', { a: { enableOptimizeJobs: true, enableBoostMaterials: false, jobProductionWeights: DEFAULT_JOB_WEIGHTS } }),
+          cold('a', {
+            a: { enableOptimizeJobs: true, enableBoostMaterials: false, jobProductionWeights: DEFAULT_JOB_WEIGHTS },
+          }),
         )
         corporationMock.nextState$.mockReturnValue(cold('b', { b: 'START' as CorpStateName }))
         divisionsMock.eachDivisionNameAndCityName$.mockReturnValue(
