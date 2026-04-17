@@ -130,12 +130,12 @@ export class EnergyMoraleOptimizer {
         if (office.numEmployees < DECAY_THRESHOLD) return
 
         // --- Energy: buy tea for a flat +2 energy boost ---
-        if (office.avgEnergy < office.maxEnergy) {
+        if (office.avgEnergy < office.maxEnergy - 0.5) {
           this.ns.corporation.buyTea(divisionName, cityName)
         }
 
         // --- Morale: throw a party to recover morale toward its maximum ---
-        if (office.avgMorale < office.maxMorale) {
+        if (office.avgMorale < office.maxMorale - 0.5) {
           const target = Math.min(office.avgMorale + config.moraleStepSize, office.maxMorale)
           const cost = computeOptimalPartyCost(office.avgMorale, target)
 

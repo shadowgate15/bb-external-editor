@@ -9,8 +9,8 @@ import { ScriptAbortController } from '@/lib/utils/script-abort-controller'
 
 export async function main(ns: NS) {
   ns.disableLog('ALL')
-  ns.ui.openTail()
-  await ns.sleep(100)
+  // ns.ui.openTail()
+  // await ns.sleep(100)
 
   const container = new Container()
 

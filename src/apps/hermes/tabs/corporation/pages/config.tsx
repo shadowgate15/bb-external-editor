@@ -24,12 +24,25 @@ export interface ConfigProps {
   onBack: () => void
 }
 
+const useExpanded = () => {
+  const [expanded, setExpanded] = React.useState<string | false>(false)
+
+  return [
+    expanded,
+    setExpanded,
+    function handleChange(panel: string) {
+      return (event: React.SyntheticEvent, isExpanded: boolean) => setExpanded(isExpanded ? panel : false)
+    },
+  ] as const
+}
+
 export function Config({ onBack }: ConfigProps) {
   const ns = useNetscript()
   const corpClient = useCorpClient()
   const portServer = usePortServer()
 
   const [config, setConfig] = React.useState<ConfigData | null>(null)
+  const [expanded, setExpanded, handleChange] = useExpanded()
 
   const fetchConfig = React.useCallback(async () => {
     const id = crypto.randomUUID()
@@ -62,7 +75,7 @@ export function Config({ onBack }: ConfigProps) {
             ...(config?.jobProductionWeights ?? {}),
             ...(jobProductionWeights ?? {}),
           },
-          ...restConfig,
+          ...(restConfig ?? {}),
         }),
       )
 
@@ -120,7 +133,7 @@ export function Config({ onBack }: ConfigProps) {
               label="Enable Energy Morale Optimizer"
             />
 
-            <Accordion>
+            <Accordion expanded={expanded === 'jobProductionWeights'} onChange={handleChange('jobProductionWeights')}>
               <AccordionSummary
                 expandIcon={<ExpandMoreIcon />}
                 aria-controls="jobProductionWeights-content"
