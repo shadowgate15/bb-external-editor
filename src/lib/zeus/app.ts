@@ -7,6 +7,7 @@ import { NSIdentifier } from '../ns.identifier'
 import { BoostMaterial } from './boost-material'
 import { CorporationDaemonServer } from './daemon/server'
 import { ExportManager } from './export-manager'
+import { OptimizeJobs } from './optimize-jobs'
 import { Seller } from './seller'
 import { SmartSupply } from './smart-supply'
 import { StateManager } from './state-manager'
@@ -34,6 +35,9 @@ export class App {
 
     @inject(ExportManager)
     private readonly exportManager: ExportManager,
+
+    @inject(OptimizeJobs)
+    private readonly optimizeJobs: OptimizeJobs,
   ) {
     this.ns.atExit(() => {
       this.server.close()
@@ -45,6 +49,7 @@ export class App {
     this.smartSupply.start()
     this.boostMaterial.start()
     this.exportManager.start()
+    this.optimizeJobs.start()
 
     return new Promise<void>((resolve, reject) => {
       this.stateManager.state$().pipe(ignoreElements()).subscribe({

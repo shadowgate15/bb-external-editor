@@ -10,6 +10,7 @@ import { ExportManager } from './export-manager'
 import { IndustryData } from './industry-data'
 import { MaterialData } from './material-data'
 import { Offices } from './offices'
+import { OptimizeJobs } from './optimize-jobs'
 import { Seller } from './seller'
 import { SmartSupply } from './smart-supply'
 import { StateManager } from './state-manager'
@@ -22,6 +23,7 @@ export const zeusModule = new ContainerModule((options) => {
   options.bind(BoostMaterial).toSelf()
   options.bind(CorporationDaemonServer).toSelf()
   options.bind(ExportManager).toSelf()
+  options.bind(OptimizeJobs).toSelf()
   options.bind(StateManager).toSelf()
   options.bind(Seller).toSelf()
   options.bind(SmartSupply).toSelf()
