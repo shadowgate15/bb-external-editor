@@ -70,39 +70,44 @@ export async function round2(ns: NS) {
    */
   const chemicalDivisionName = 'Chemical'
 
-  ns.corporation.expandIndustry('Chemical', chemicalDivisionName)
-  log(`Expanded industry ${chemicalDivisionName}`, 'success')
+  if (!ns.corporation.getCorporation().divisions.includes(chemicalDivisionName)) {
+    ns.corporation.expandIndustry('Chemical', chemicalDivisionName)
+    log(`Expanded industry ${chemicalDivisionName}`, 'success')
+  }
 
   for (const cityName of Object.values(ns.enums.CityName)) {
-    ns.corporation.expandCity(chemicalDivisionName, cityName)
-    log(`Expanded ${chemicalDivisionName} to ${cityName}`, 'success')
+    const office = () => ns.corporation.getOffice(chemicalDivisionName, cityName)
 
+    if (!ns.corporation.getDivision(chemicalDivisionName).cities.includes(cityName)) {
+      ns.corporation.expandCity(chemicalDivisionName, cityName)
+      log(`Expanded ${chemicalDivisionName} to ${cityName}`, 'success')
+    }
+
+    if (!ns.corporation.hasWarehouse(chemicalDivisionName, cityName)) {
+      ns.corporation.purchaseWarehouse(chemicalDivisionName, cityName)
+    }
     await waitForFunds(ns, ns.corporation.getUpgradeWarehouseCost(chemicalDivisionName, cityName))
-    ns.corporation.purchaseWarehouse(chemicalDivisionName, cityName)
+    ns.corporation.upgradeWarehouse(chemicalDivisionName, cityName, 1)
     log(`Purchased warehouse for ${chemicalDivisionName} in ${cityName}`, 'success')
 
-    let office = ns.corporation.getOffice(agDivisionName, cityName)
-
-    if (office.size < 5) {
-      await waitForFunds(ns, ns.corporation.getOfficeSizeUpgradeCost(chemicalDivisionName, cityName, 5 - office.size))
-      ns.corporation.upgradeOfficeSize(agDivisionName, cityName, 5 - office.size)
+    if (office().size < 5) {
+      await waitForFunds(ns, ns.corporation.getOfficeSizeUpgradeCost(chemicalDivisionName, cityName, 5 - office().size))
+      ns.corporation.upgradeOfficeSize(chemicalDivisionName, cityName, 5 - office().size)
       log(`Upgraded ${chemicalDivisionName} office in ${cityName} to size 5`, 'success')
     }
 
     // Hire Employes up to 5 (max for size 5 office) to maximize production
-    while (office.numEmployees < 5) {
-      await waitFor(ns, () => ns.corporation.hireEmployee(agDivisionName, cityName))
+    while (office().numEmployees < 5) {
+      await waitFor(ns, () => ns.corporation.hireEmployee(chemicalDivisionName, cityName))
 
-      office = ns.corporation.getOffice(agDivisionName, cityName) // Refresh office info after hiring
-
-      log(`Hired employee for ${chemicalDivisionName} in ${cityName} (${office.numEmployees}/5)`, 'success')
+      log(`Hired employee for ${chemicalDivisionName} in ${cityName} (${office().numEmployees}/5)`, 'success')
     }
 
-    ns.corporation.setAutoJobAssignment(agDivisionName, cityName, 'Operations', 1)
-    ns.corporation.setAutoJobAssignment(agDivisionName, cityName, 'Engineer', 1)
-    ns.corporation.setAutoJobAssignment(agDivisionName, cityName, 'Business', 1)
-    ns.corporation.setAutoJobAssignment(agDivisionName, cityName, 'Management', 1)
-    ns.corporation.setAutoJobAssignment(agDivisionName, cityName, 'Research & Development', 1)
+    ns.corporation.setAutoJobAssignment(chemicalDivisionName, cityName, 'Operations', 1)
+    ns.corporation.setAutoJobAssignment(chemicalDivisionName, cityName, 'Engineer', 1)
+    ns.corporation.setAutoJobAssignment(chemicalDivisionName, cityName, 'Business', 1)
+    ns.corporation.setAutoJobAssignment(chemicalDivisionName, cityName, 'Management', 1)
+    ns.corporation.setAutoJobAssignment(chemicalDivisionName, cityName, 'Research & Development', 1)
     log(`Set job assignments for ${chemicalDivisionName} in ${cityName}`, 'success')
   }
 }
