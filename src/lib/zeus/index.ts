@@ -6,6 +6,7 @@ import { Config } from './config'
 import { Corporation } from './corporation'
 import { CorporationDaemonServer } from './daemon/server'
 import { Divisions } from './divisions'
+import { EnergyMoraleOptimizer } from './energy-morale-optimizer'
 import { ExportManager } from './export-manager'
 import { IndustryData } from './industry-data'
 import { MaterialData } from './material-data'
@@ -22,6 +23,7 @@ export const zeusModule = new ContainerModule((options) => {
   options.bind(App).toSelf()
   options.bind(BoostMaterial).toSelf()
   options.bind(CorporationDaemonServer).toSelf()
+  options.bind(EnergyMoraleOptimizer).toSelf()
   options.bind(ExportManager).toSelf()
   options.bind(OptimizeJobs).toSelf()
   options.bind(StateManager).toSelf()

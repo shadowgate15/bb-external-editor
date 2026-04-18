@@ -7,8 +7,8 @@ import { CorporationDaemonServer } from '@/lib/zeus/daemon/server'
 
 export async function main(ns: NS) {
   ns.disableLog('ALL')
-  ns.ui.openTail()
-  await ns.asleep(0)
+  // ns.ui.openTail()
+  // await ns.asleep(0)
 
   ns.print('INFO Starting zeusd...')
 
