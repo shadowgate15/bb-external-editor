@@ -25,36 +25,32 @@ export async function round2(ns: NS) {
   const agDivisionName = assertIsString(
     corp.divisions.find((d) => ns.corporation.getDivision(d).type === 'Agriculture'),
   )
-  let agDivision = ns.corporation.getDivision(agDivisionName)
+  const agDivision = () => ns.corporation.getDivision(agDivisionName)
 
-  for (const cityName of agDivision.cities) {
-    let office = ns.corporation.getOffice(agDivisionName, cityName)
+  for (const cityName of agDivision().cities) {
+    const office = () => ns.corporation.getOffice(agDivisionName, cityName)
 
-    if (office.size < 9) {
-      await waitForFunds(ns, ns.corporation.getOfficeSizeUpgradeCost(agDivisionName, cityName, 9 - office.size))
+    if (office().size < 9) {
+      await waitForFunds(ns, ns.corporation.getOfficeSizeUpgradeCost(agDivisionName, cityName, 9 - office().size))
 
-      ns.corporation.upgradeOfficeSize(agDivisionName, cityName, 9 - office.size)
+      ns.corporation.upgradeOfficeSize(agDivisionName, cityName, 9 - office().size)
       log(`Upgraded ${agDivisionName} office in ${cityName} to size 9`, 'success')
     }
 
     // Hire Employes up to 9 (max for size 9 office) to maximize production
-    while (office.numEmployees < 9) {
+    while (office().numEmployees < 9) {
       await waitFor(ns, () => ns.corporation.hireEmployee(agDivisionName, cityName))
 
-      office = ns.corporation.getOffice(agDivisionName, cityName) // Refresh office info after hiring
-
-      log(`Hired employee for ${agDivisionName} in ${cityName} (${office.numEmployees}/9)`, 'success')
+      log(`Hired employee for ${agDivisionName} in ${cityName} (${office().numEmployees}/9)`, 'success')
     }
   }
 
-  while (agDivision.numAdVerts < 8) {
+  while (agDivision().numAdVerts < 8) {
     await waitForFunds(ns, ns.corporation.getHireAdVertCost(agDivisionName))
 
     ns.corporation.hireAdVert(agDivisionName)
 
-    agDivision = ns.corporation.getDivision(agDivisionName) // Refresh division info after hiring
-
-    log(`Hired AdVert for ${agDivisionName} (${agDivision.numAdVerts}/8)`, 'success')
+    log(`Hired AdVert for ${agDivisionName} (${agDivision().numAdVerts}/8)`, 'success')
   }
 
   /**
