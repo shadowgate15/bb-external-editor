@@ -45,14 +45,6 @@ export async function round2(ns: NS) {
 
       log(`Hired employee for ${agDivisionName} in ${cityName} (${office.numEmployees}/9)`, 'success')
     }
-
-    ns.corporation.setAutoJobAssignment(agDivisionName, cityName, 'Operations', 2)
-    ns.corporation.setAutoJobAssignment(agDivisionName, cityName, 'Engineer', 2)
-    ns.corporation.setAutoJobAssignment(agDivisionName, cityName, 'Business', 2)
-    ns.corporation.setAutoJobAssignment(agDivisionName, cityName, 'Management', 2)
-    ns.corporation.setAutoJobAssignment(agDivisionName, cityName, 'Research & Development', 1)
-
-    log(`Set job assignments for ${agDivisionName} in ${cityName}`, 'success')
   }
 
   while (agDivision.numAdVerts < 8) {
@@ -102,13 +94,6 @@ export async function round2(ns: NS) {
 
       log(`Hired employee for ${chemicalDivisionName} in ${cityName} (${office().numEmployees}/5)`, 'success')
     }
-
-    ns.corporation.setAutoJobAssignment(chemicalDivisionName, cityName, 'Operations', 1)
-    ns.corporation.setAutoJobAssignment(chemicalDivisionName, cityName, 'Engineer', 1)
-    ns.corporation.setAutoJobAssignment(chemicalDivisionName, cityName, 'Business', 1)
-    ns.corporation.setAutoJobAssignment(chemicalDivisionName, cityName, 'Management', 1)
-    ns.corporation.setAutoJobAssignment(chemicalDivisionName, cityName, 'Research & Development', 1)
-    log(`Set job assignments for ${chemicalDivisionName} in ${cityName}`, 'success')
   }
 }
 
