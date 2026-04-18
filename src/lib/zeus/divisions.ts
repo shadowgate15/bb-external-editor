@@ -1,6 +1,6 @@
 import 'reflect-metadata'
 
-import { CityName, Division, Material, Product } from '@ns'
+import { CityName, CorpIndustryName, Division, Material, Product } from '@ns'
 import { inject, injectable } from 'inversify'
 import {
   filter,
@@ -221,6 +221,21 @@ export class Divisions {
       map((divisionCityMaterials) => divisionCityMaterials[delimited(divisionName, cityName)]),
       first((materials) => materials !== undefined),
     )
+  }
+
+  /**
+   * Searches all divisions synchronously and returns the name of the first one whose
+   * industry type matches `type`. Returns `undefined` if no match is found.
+   *
+   * When multiple divisions of the same type exist, the first one encountered
+   * (by insertion order of `getCorporation().divisions`) is returned.
+   *
+   * @param type - The industry type to search for (e.g. `'Agriculture'`).
+   * @returns The division name, or `undefined` if no division of that type exists.
+   */
+  findDivisionNameByType(type: CorpIndustryName): string | undefined {
+    const corp = this.ns.corporation.getCorporation()
+    return corp.divisions.find((d) => this.ns.corporation.getDivision(d).type === type)
   }
 
   clearBoostMaterials() {

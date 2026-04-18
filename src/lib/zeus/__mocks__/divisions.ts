@@ -1,4 +1,4 @@
-import type { CityName, Division, Material, Product } from '@ns'
+import type { CityName, CorpIndustryName, Division, Material, Product } from '@ns'
 import { Observable, Subject } from 'rxjs'
 
 export type DivisionsMock = {
@@ -7,6 +7,7 @@ export type DivisionsMock = {
   divisionFor$: jest.MockedFunction<(divisionName: string) => Observable<Division>>
   divisionCityProductsFor$: jest.MockedFunction<(divisionName: string, cityName: string) => Observable<Product[]>>
   divisionCityMaterialsFor$: jest.MockedFunction<(divisionName: string, cityName: string) => Observable<Material[]>>
+  findDivisionNameByType: jest.MockedFunction<(type: CorpIndustryName) => string | undefined>
   /** Controllable subject — push pairs here in tests. */
   _subject: Subject<{ divisionName: string; cityName: CityName }>
 }
@@ -27,6 +28,7 @@ export function createDivisionsMock(): DivisionsMock {
     divisionFor$: jest.fn<Observable<Division>, [string]>(),
     divisionCityProductsFor$: jest.fn<Observable<Product[]>, [string, string]>(),
     divisionCityMaterialsFor$: jest.fn<Observable<Material[]>, [string, string]>(),
+    findDivisionNameByType: jest.fn<string | undefined, [CorpIndustryName]>(),
     _subject: subject,
   }
 }

@@ -12,12 +12,15 @@ import { IndustryData } from './industry-data'
 import { MaterialData } from './material-data'
 import { Offices } from './offices'
 import { OptimizeJobs } from './optimize-jobs'
+import { Round2 } from './rounds/2'
 import { Seller } from './seller'
 import { SmartSupply } from './smart-supply'
 import { StateManager } from './state-manager'
 import { StorageUpgrader } from './storage-upgrader'
 import { TotalRawProduction } from './total-raw-production'
 import { Warehouses } from './warehouses'
+
+export { Round2 } from './rounds/2'
 
 export const zeusModule = new ContainerModule((options) => {
   options.bind(App).toSelf()
@@ -26,6 +29,7 @@ export const zeusModule = new ContainerModule((options) => {
   options.bind(EnergyMoraleOptimizer).toSelf()
   options.bind(ExportManager).toSelf()
   options.bind(OptimizeJobs).toSelf()
+  options.bind(Round2).toSelf()
   options.bind(StateManager).toSelf()
   options.bind(Seller).toSelf()
   options.bind(SmartSupply).toSelf()

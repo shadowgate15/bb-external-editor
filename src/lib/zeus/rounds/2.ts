@@ -1,104 +1,141 @@
+import 'reflect-metadata'
+
 import { ToastVariant } from '@ns'
+import { inject, injectable } from 'inversify'
 
 import { assertIsString } from '@/lib/assert/is-string'
+import { NSIdentifier } from '@/lib/ns.identifier'
 
-export async function round2(ns: NS) {
-  ns.disableLog('sleep')
-  ns.ui.openTail()
-  await ns.sleep(100)
+import { Divisions } from '../divisions'
+import { waitFor, waitForFunds } from '../utils/wait'
 
-  const log = (msg: string, variant: ToastVariant | `${ToastVariant}`) => {
-    ns.print(`SUCCESS ${msg}`)
-    ns.toast(msg, variant)
-  }
+/** Target office size for Agriculture division cities in round 2. */
+const AG_OFFICE_SIZE = 9
 
-  // Purchase Export unlock if not already unlocked
-  if (!ns.corporation.hasUnlock('Export')) {
-    ns.corporation.purchaseUnlock('Export')
-  }
+/** Target number of AdVerts for the Agriculture division in round 2. */
+const AG_ADVERTS_TARGET = 8
 
-  const corp = ns.corporation.getCorporation()
+/** Target office size for the Chemical division cities in round 2. */
+const CHEMICAL_OFFICE_SIZE = 5
 
-  /**
-   * Upgrade all Agriculture offices to size 9 to maximize export production
-   */
-  const agDivisionName = assertIsString(
-    corp.divisions.find((d) => ns.corporation.getDivision(d).type === 'Agriculture'),
-  )
-  const agDivision = () => ns.corporation.getDivision(agDivisionName)
+/** Name of the Chemical division created during round 2. */
+const CHEMICAL_DIVISION_NAME = 'Chemical'
 
-  for (const cityName of agDivision().cities) {
-    const office = () => ns.corporation.getOffice(agDivisionName, cityName)
+/**
+ * Injectable service that executes all round-2 corporation setup steps:
+ * upgrading Agriculture offices, hiring AdVerts, and bootstrapping the
+ * Chemical division across all cities.
+ */
+@injectable('Singleton')
+export class Round2 {
+  constructor(
+    @inject(NSIdentifier)
+    private readonly ns: NS,
 
-    if (office().size < 9) {
-      await waitForFunds(ns, ns.corporation.getOfficeSizeUpgradeCost(agDivisionName, cityName, 9 - office().size))
-
-      ns.corporation.upgradeOfficeSize(agDivisionName, cityName, 9 - office().size)
-      log(`Upgraded ${agDivisionName} office in ${cityName} to size 9`, 'success')
-    }
-
-    // Hire Employes up to 9 (max for size 9 office) to maximize production
-    while (office().numEmployees < 9) {
-      await waitFor(ns, () => ns.corporation.hireEmployee(agDivisionName, cityName))
-
-      log(`Hired employee for ${agDivisionName} in ${cityName} (${office().numEmployees}/9)`, 'success')
-    }
-  }
-
-  while (agDivision().numAdVerts < 8) {
-    await waitForFunds(ns, ns.corporation.getHireAdVertCost(agDivisionName))
-
-    ns.corporation.hireAdVert(agDivisionName)
-
-    log(`Hired AdVert for ${agDivisionName} (${agDivision().numAdVerts}/8)`, 'success')
-  }
+    @inject(Divisions)
+    private readonly divisions: Divisions,
+  ) {}
 
   /**
-   * Create the Chemical division
+   * Executes the full round-2 setup sequence and resolves when complete.
    */
-  const chemicalDivisionName = 'Chemical'
+  async run(): Promise<void> {
+    // Purchase Export unlock if not already unlocked
+    if (!this.ns.corporation.hasUnlock('Export')) {
+      this.ns.corporation.purchaseUnlock('Export')
+    }
 
-  if (!ns.corporation.getCorporation().divisions.includes(chemicalDivisionName)) {
-    ns.corporation.expandIndustry('Chemical', chemicalDivisionName)
-    log(`Expanded industry ${chemicalDivisionName}`, 'success')
+    /**
+     * Upgrade all Agriculture offices to size AG_OFFICE_SIZE to maximize export production
+     */
+    const agDivisionName = assertIsString(
+      this.divisions.findDivisionNameByType('Agriculture'),
+      'No Agriculture division found',
+    )
+    const agDivision = () => this.ns.corporation.getDivision(agDivisionName)
+
+    for (const cityName of agDivision().cities) {
+      const office = () => this.ns.corporation.getOffice(agDivisionName, cityName)
+
+      if (office().size < AG_OFFICE_SIZE) {
+        await waitForFunds(
+          this.ns,
+          this.ns.corporation.getOfficeSizeUpgradeCost(agDivisionName, cityName, AG_OFFICE_SIZE - office().size),
+        )
+
+        this.ns.corporation.upgradeOfficeSize(agDivisionName, cityName, AG_OFFICE_SIZE - office().size)
+        this.log(`Upgraded ${agDivisionName} office in ${cityName} to size ${AG_OFFICE_SIZE}`, 'success')
+      }
+
+      // Hire employees up to AG_OFFICE_SIZE (max for size-9 office) to maximize production
+      while (office().numEmployees < AG_OFFICE_SIZE) {
+        await waitFor(this.ns, () => this.ns.corporation.hireEmployee(agDivisionName, cityName))
+
+        this.log(
+          `Hired employee for ${agDivisionName} in ${cityName} (${office().numEmployees}/${AG_OFFICE_SIZE})`,
+          'success',
+        )
+      }
+    }
+
+    while (agDivision().numAdVerts < AG_ADVERTS_TARGET) {
+      await waitForFunds(this.ns, this.ns.corporation.getHireAdVertCost(agDivisionName))
+
+      this.ns.corporation.hireAdVert(agDivisionName)
+
+      this.log(`Hired AdVert for ${agDivisionName} (${agDivision().numAdVerts}/${AG_ADVERTS_TARGET})`, 'success')
+    }
+
+    /**
+     * Create the Chemical division
+     */
+    if (!this.ns.corporation.getCorporation().divisions.includes(CHEMICAL_DIVISION_NAME)) {
+      this.ns.corporation.expandIndustry('Chemical', CHEMICAL_DIVISION_NAME)
+      this.log(`Expanded industry ${CHEMICAL_DIVISION_NAME}`, 'success')
+    }
+
+    for (const cityName of Object.values(this.ns.enums.CityName)) {
+      const office = () => this.ns.corporation.getOffice(CHEMICAL_DIVISION_NAME, cityName)
+
+      if (!this.ns.corporation.getDivision(CHEMICAL_DIVISION_NAME).cities.includes(cityName)) {
+        this.ns.corporation.expandCity(CHEMICAL_DIVISION_NAME, cityName)
+        this.log(`Expanded ${CHEMICAL_DIVISION_NAME} to ${cityName}`, 'success')
+      }
+
+      if (!this.ns.corporation.hasWarehouse(CHEMICAL_DIVISION_NAME, cityName)) {
+        this.ns.corporation.purchaseWarehouse(CHEMICAL_DIVISION_NAME, cityName)
+      }
+      await waitForFunds(this.ns, this.ns.corporation.getUpgradeWarehouseCost(CHEMICAL_DIVISION_NAME, cityName))
+      this.ns.corporation.upgradeWarehouse(CHEMICAL_DIVISION_NAME, cityName, 1)
+      this.log(`Purchased warehouse for ${CHEMICAL_DIVISION_NAME} in ${cityName}`, 'success')
+
+      if (office().size < CHEMICAL_OFFICE_SIZE) {
+        await waitForFunds(
+          this.ns,
+          this.ns.corporation.getOfficeSizeUpgradeCost(
+            CHEMICAL_DIVISION_NAME,
+            cityName,
+            CHEMICAL_OFFICE_SIZE - office().size,
+          ),
+        )
+        this.ns.corporation.upgradeOfficeSize(CHEMICAL_DIVISION_NAME, cityName, CHEMICAL_OFFICE_SIZE - office().size)
+        this.log(`Upgraded ${CHEMICAL_DIVISION_NAME} office in ${cityName} to size ${CHEMICAL_OFFICE_SIZE}`, 'success')
+      }
+
+      // Hire employees up to CHEMICAL_OFFICE_SIZE (max for size-5 office) to maximize production
+      while (office().numEmployees < CHEMICAL_OFFICE_SIZE) {
+        await waitFor(this.ns, () => this.ns.corporation.hireEmployee(CHEMICAL_DIVISION_NAME, cityName))
+
+        this.log(
+          `Hired employee for ${CHEMICAL_DIVISION_NAME} in ${cityName} (${office().numEmployees}/${CHEMICAL_OFFICE_SIZE})`,
+          'success',
+        )
+      }
+    }
   }
 
-  for (const cityName of Object.values(ns.enums.CityName)) {
-    const office = () => ns.corporation.getOffice(chemicalDivisionName, cityName)
-
-    if (!ns.corporation.getDivision(chemicalDivisionName).cities.includes(cityName)) {
-      ns.corporation.expandCity(chemicalDivisionName, cityName)
-      log(`Expanded ${chemicalDivisionName} to ${cityName}`, 'success')
-    }
-
-    if (!ns.corporation.hasWarehouse(chemicalDivisionName, cityName)) {
-      ns.corporation.purchaseWarehouse(chemicalDivisionName, cityName)
-    }
-    await waitForFunds(ns, ns.corporation.getUpgradeWarehouseCost(chemicalDivisionName, cityName))
-    ns.corporation.upgradeWarehouse(chemicalDivisionName, cityName, 1)
-    log(`Purchased warehouse for ${chemicalDivisionName} in ${cityName}`, 'success')
-
-    if (office().size < 5) {
-      await waitForFunds(ns, ns.corporation.getOfficeSizeUpgradeCost(chemicalDivisionName, cityName, 5 - office().size))
-      ns.corporation.upgradeOfficeSize(chemicalDivisionName, cityName, 5 - office().size)
-      log(`Upgraded ${chemicalDivisionName} office in ${cityName} to size 5`, 'success')
-    }
-
-    // Hire Employes up to 5 (max for size 5 office) to maximize production
-    while (office().numEmployees < 5) {
-      await waitFor(ns, () => ns.corporation.hireEmployee(chemicalDivisionName, cityName))
-
-      log(`Hired employee for ${chemicalDivisionName} in ${cityName} (${office().numEmployees}/5)`, 'success')
-    }
+  private log(msg: string, variant: ToastVariant | `${ToastVariant}`) {
+    this.ns.print(`SUCCESS ${msg}`)
+    this.ns.toast(msg, variant)
   }
-}
-
-async function waitFor(ns: NS, condition: () => boolean) {
-  while (!condition()) {
-    await ns.sleep(1000)
-  }
-}
-
-async function waitForFunds(ns: NS, amount: number) {
-  return waitFor(ns, () => ns.corporation.getCorporation().funds >= amount)
 }

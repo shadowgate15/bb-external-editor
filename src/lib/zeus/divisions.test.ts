@@ -449,4 +449,53 @@ describe('Divisions', () => {
       expect(emissions).toHaveLength(0)
     })
   })
+
+  describe('findDivisionNameByType', () => {
+    test('returns the division name matching the given industry type', () => {
+      jest
+        .mocked(mockNs.corporation.getCorporation)
+        .mockReturnValue({ divisions: ['AgriCorp'] } as ReturnType<typeof mockNs.corporation.getCorporation>)
+      jest
+        .mocked(mockNs.corporation.getDivision)
+        .mockReturnValue(makeDivision({ name: 'AgriCorp', type: 'Agriculture' }))
+
+      const sut = getSut()
+      expect(sut.findDivisionNameByType('Agriculture')).toBe('AgriCorp')
+    })
+
+    test('returns undefined when no division matches the given type', () => {
+      jest
+        .mocked(mockNs.corporation.getCorporation)
+        .mockReturnValue({ divisions: ['AgriCorp'] } as ReturnType<typeof mockNs.corporation.getCorporation>)
+      jest
+        .mocked(mockNs.corporation.getDivision)
+        .mockReturnValue(makeDivision({ name: 'AgriCorp', type: 'Agriculture' }))
+
+      const sut = getSut()
+      expect(sut.findDivisionNameByType('Chemical')).toBeUndefined()
+    })
+
+    test('returns the first matching division when multiple exist', () => {
+      jest
+        .mocked(mockNs.corporation.getCorporation)
+        .mockReturnValue({ divisions: ['AgriCorp1', 'AgriCorp2'] } as ReturnType<
+          typeof mockNs.corporation.getCorporation
+        >)
+      jest
+        .mocked(mockNs.corporation.getDivision)
+        .mockImplementation((name) => makeDivision({ name, type: 'Agriculture' }))
+
+      const sut = getSut()
+      expect(sut.findDivisionNameByType('Agriculture')).toBe('AgriCorp1')
+    })
+
+    test('returns undefined when there are no divisions', () => {
+      jest
+        .mocked(mockNs.corporation.getCorporation)
+        .mockReturnValue({ divisions: [] } as unknown as ReturnType<typeof mockNs.corporation.getCorporation>)
+
+      const sut = getSut()
+      expect(sut.findDivisionNameByType('Agriculture')).toBeUndefined()
+    })
+  })
 })
